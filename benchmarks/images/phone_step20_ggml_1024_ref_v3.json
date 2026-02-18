@@ -1,0 +1,16 @@
+{
+  "source_type": "adb_phone",
+  "source_path": "/data/local/tmp/sd_bench/step20_ggml_1024_ref_v3.png",
+  "captured_date": "2026-02-18",
+  "model": "z_image reference",
+  "sampler": "unknown",
+  "steps": 20,
+  "seed": 42,
+  "prompt": "",
+  "notes": "Reference image snapshot from same sd_bench directory; paired for visual comparison.",
+  "image": "phone_step20_ggml_1024_ref_v3.png",
+  "resolution": {
+    "width": 1024,
+    "height": 1024
+  }
+}

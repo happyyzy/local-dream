@@ -1,0 +1,321 @@
+[DEBUG] main.cpp:1790 - version: stable-diffusion.cpp version master-492-f957fa3+, commit f957fa3
+[DEBUG] main.cpp:1791 - System Info: 
+    SSE3 = 0 |     AVX = 0 |     AVX2 = 0 |     AVX512 = 0 |     AVX512_VBMI = 0 |     AVX512_VNNI = 0 |     FMA = 0 |     NEON = 1 |     ARM_FMA = 1 |     F16C = 0 |     FP16_VA = 0 |     WASM_SIMD = 0 |     VSX = 0 | 
+[DEBUG] main.cpp:1792 - SDCliParams {
+  mode: img_gen,
+  output_path: "/sdcard/Download/step13_t1_q096_vaeconvdirect_phone.png",
+  load_latent_path: "",
+  verbose: true,
+  color: false,
+  canny_preprocess: false,
+  convert_name: false,
+  preview_method: none,
+  preview_interval: 1,
+  preview_path: "preview.png",
+  preview_fps: 16,
+  taesd_preview: false,
+  preview_noisy: false,
+  llm_embed_only: false,
+  llm_embed_id: -1,
+  llm_embed_n: 1,
+  llm_embed_dump: "llm_embed_only.tensor",
+  llm_embed_arch: "qwen3",
+  llm_forward_only: false,
+  llm_generate_only: false,
+  llm_max_new_tokens: 32,
+  llm_forward_dump: "",
+  llm_generate_dump: "",
+  llm_version: "flux2_klein",
+  q4_matmul_bench: false,
+  q4_weight: "q_proj",
+  q4_n_token: 1,
+  q4_input: "",
+  q4_dump: "q4_matmul.tensor",
+  rmsnorm_bench: false,
+  rmsnorm_weight: "q_norm",
+  rmsnorm_input: "",
+  rmsnorm_dump: "rmsnorm.tensor",
+  rmsnorm_eps: 1e-06,
+  attn_bench: false,
+  attn_q_input: "",
+  attn_k_input: "",
+  attn_v_input: "",
+  attn_n_head: 32,
+  attn_dump: "attn.tensor"
+}
+[DEBUG] main.cpp:1793 - SDContextParams {
+  n_threads: 1,
+  model_path: "",
+  clip_l_path: "",
+  clip_g_path: "",
+  clip_vision_path: "",
+  t5xxl_path: "",
+  llm_path: "/sdcard/Download/qwen_3_4b-Q4_0.gguf",
+  llm_vision_path: "",
+  cond_c_crossattn_path: "",
+  uncond_c_crossattn_path: "",
+  diffusion_model_path: "/sdcard/Download/flux-2-klein-4b-Q4_0.gguf",
+  high_noise_diffusion_model_path: "",
+  vae_path: "/sdcard/Download/flux2-vae.safetensors",
+  taesd_path: "",
+  esrgan_path: "",
+  control_net_path: "",
+  embedding_dir: "",
+  embeddings: {
+  }
+  wtype: NONE,
+  tensor_type_rules: "",
+  lora_model_dir: ".",
+  photo_maker_path: "",
+  rng_type: cuda,
+  sampler_rng_type: NONE,
+  flow_shift: INF
+  offload_params_to_cpu: false,
+  enable_mmap: false,
+  control_net_cpu: false,
+  clip_on_cpu: false,
+  vae_on_cpu: false,
+  flash_attn: false,
+  diffusion_flash_attn: true,
+  diffusion_conv_direct: false,
+  vae_conv_direct: true,
+  circular: false,
+  circular_x: false,
+  circular_y: false,
+  chroma_use_dit_mask: true,
+  qwen_image_zero_cond_t: false,
+  chroma_use_t5_mask: false,
+  chroma_t5_mask_pad: 1,
+  prediction: NONE,
+  lora_apply_mode: auto,
+  vae_tiling_params: { 0, 0, 0, 0.5, 0, 0 },
+  force_sdxl_vae_conv_scale: false
+}
+[DEBUG] main.cpp:1794 - SDGenerationParams {
+  loras: "{
+  }",
+  high_noise_loras: "{
+  }",
+  prompt: "a lovely cat",
+  negative_prompt: "",
+  clip_skip: -1,
+  width: 1024,
+  height: 1024,
+  batch_count: 1,
+  init_image_path: "",
+  end_image_path: "",
+  mask_image_path: "",
+  control_image_path: "",
+  ref_image_paths: [],
+  control_video_path: "",
+  auto_resize_ref_image: true,
+  increase_ref_index: false,
+  pm_id_images_dir: "",
+  pm_id_embed_path: "",
+  pm_style_strength: 20,
+  skip_layers: [7, 8, 9],
+  sample_params: (txt_cfg: 1.00, img_cfg: 1.00, distilled_guidance: 3.50, slg.layer_count: 3, slg.layer_start: 0.01, slg.layer_end: 0.20, slg.scale: 0.00, scheduler: NONE, sample_method: NONE, sample_steps: 4, eta: 0.00, shifted_timestep: 0),
+  high_noise_skip_layers: [7, 8, 9],
+  high_noise_sample_params: (txt_cfg: 7.00, img_cfg: 7.00, distilled_guidance: 3.50, slg.layer_count: 3, slg.layer_start: 0.01, slg.layer_end: 0.20, slg.scale: 0.00, scheduler: NONE, sample_method: NONE, sample_steps: 20, eta: 0.00, shifted_timestep: 0),
+  custom_sigmas: [],
+  cache_mode: "",
+  cache_option: "",
+  cache: disabled (threshold=1, start=0.15, end=0.95),
+  moe_boundary: 0.875,
+  video_frames: 1,
+  fps: 16,
+  vace_strength: 1,
+  strength: 0.75,
+  control_strength: 0.9,
+  seed: 42,
+  upscale_repeats: 1,
+  upscale_tile_size: 128,
+}
+[DEBUG] stable-diffusion.cpp:493  - Using OpenCL backend
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: selected platform: 'QUALCOMM Snapdragon(TM)'
+[INFO ] ggml_extend.hpp:82   - 
+ggml_opencl: device: 'QUALCOMM Adreno(TM) 830 (OpenCL 3.0 Adreno(TM) 830)'
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: OpenCL driver: OpenCL 3.0 QUALCOMM build: 0800.46 Compiler E031.47.18.36
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: vector subgroup broadcast support: true
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: device FP16 support: true
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: mem base addr align: 128
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: max mem alloc size: 1024 MB
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: device max image buffer size (pixels): 134217728
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: device max workgroup size: 1024
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: SVM coarse grain buffer support: true
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: SVM fine grain buffer support: true
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: SVM fine grain system support: false
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: SVM atomics support: true
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: flattening quantized weights representation as struct of arrays (GGML_OPENCL_SOA_Q)
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: using kernels optimized for Adreno (GGML_OPENCL_USE_ADRENO_KERNELS)
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: loading OpenCL kernels
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - .
+[DEBUG] ggml_extend.hpp:91   - 
+[INFO ] ggml_extend.hpp:82   - ggml_opencl: default device: 'QUALCOMM Adreno(TM) 830 (OpenCL 3.0 Adreno(TM) 830)'
+[INFO ] stable-diffusion.cpp:564  - loading diffusion model from '/sdcard/Download/flux-2-klein-4b-Q4_0.gguf'
+[INFO ] model.cpp:370  - load /sdcard/Download/flux-2-klein-4b-Q4_0.gguf using gguf format
+[DEBUG] model.cpp:416  - init from '/sdcard/Download/flux-2-klein-4b-Q4_0.gguf'
+[INFO ] stable-diffusion.cpp:611  - loading llm from '/sdcard/Download/qwen_3_4b-Q4_0.gguf'
+[INFO ] model.cpp:370  - load /sdcard/Download/qwen_3_4b-Q4_0.gguf using gguf format
+[DEBUG] model.cpp:416  - init from '/sdcard/Download/qwen_3_4b-Q4_0.gguf'
+[INFO ] stable-diffusion.cpp:625  - loading vae from '/sdcard/Download/flux2-vae.safetensors'
+[INFO ] model.cpp:373  - load /sdcard/Download/flux2-vae.safetensors using safetensors format
+[DEBUG] model.cpp:507  - init from '/sdcard/Download/flux2-vae.safetensors', prefix = 'vae.'
+[INFO ] stable-diffusion.cpp:641  - Version: Flux.2 klein 
+[INFO ] stable-diffusion.cpp:669  - Weight type stat:                      f32: 248  |     f16: 66   |    q4_0: 481  
+[INFO ] stable-diffusion.cpp:670  - Conditioner weight type stat:         q4_0: 398  
+[INFO ] stable-diffusion.cpp:671  - Diffusion model weight type stat:      f16: 66   |    q4_0: 83   
+[INFO ] stable-diffusion.cpp:672  - VAE weight type stat:                  f32: 248  
+[DEBUG] stable-diffusion.cpp:674  - ggml tensor size = 400 bytes
+[DEBUG] llm.hpp:476  - merges size 151387
+[DEBUG] llm.hpp:508  - vocab size: 151669
+[DEBUG] llm.hpp:1563 - llm: num_layers = 36, vocab_size = 151936, hidden_size = 2560, intermediate_size = 9728
+[INFO ] flux.hpp:1849 - flux: depth = 5, depth_single_blocks = 20, guidance_embed = false, context_in_dim = 7680, hidden_size = 3072, num_heads = 24
+[DEBUG] ggml_extend.hpp:2126 - qwen3 params backend buffer size =  2158.46 MB(VRAM) (398 tensors)
+[DEBUG] ggml_extend.hpp:2126 - flux params backend buffer size =  2152.34 MB(VRAM) (149 tensors)
+[INFO ] stable-diffusion.cpp:922  - Using Conv2d direct in the vae model
+[DEBUG] ggml_extend.hpp:2126 - vae params backend buffer size =  96.72 MB(VRAM) (140 tensors)
+[INFO ] stable-diffusion.cpp:1039 - Using flash attention in the diffusion model
+[DEBUG] stable-diffusion.cpp:1072 - loading weights
+[DEBUG] model.cpp:1381 - using 1 threads for model loading
+[DEBUG] model.cpp:1403 - loading tensors from /sdcard/Download/flux-2-klein-4b-Q4_0.gguf
+  |>                                                 | 6/795 - 29.70it/s[K  |>                                                 | 12/795 - 29.85it/s[K  |=>                                                | 21/795 - 34.88it/s[K  |=>                                                | 28/795 - 34.91it/s[K  |==>                                               | 34/795 - 33.93it/s[K  |==>                                               | 40/795 - 33.28it/s[K  |==>                                               | 45/795 - 32.10it/s[K  |===>                                              | 48/795 - 29.96it/s[K  |===>                                              | 54/795 - 29.95it/s[K  |===>                                              | 60/795 - 29.96it/s[K  |===>                                              | 63/795 - 28.60it/s[K  |====>                                             | 67/795 - 27.88it/s[K  |====>                                             | 71/795 - 27.28it/s[K  |====>                                             | 75/795 - 26.76it/s[K  |=====>                                            | 82/795 - 27.31it/s[K  |=====>                                            | 86/795 - 26.84it/s[K  |=====>                                            | 90/795 - 26.44it/s[K  |=====>                                            | 94/795 - 26.08it/s[K  |======>                                           | 98/795 - 25.76it/s[K  |======>                                           | 102/795 - 25.47it/s[K  |======>                                           | 106/795 - 25.21it/s[K  |======>                                           | 110/795 - 24.98it/s[K  |=======>                                          | 114/795 - 24.76it/s[K  |=======>                                          | 118/795 - 24.56it/s[K  |=======>                                          | 122/795 - 24.38it/s[K  |=======>                                          | 127/795 - 24.40it/s[K  |========>                                         | 134/795 - 24.79it/s[K  |========>                                         | 138/795 - 24.62it/s[K  |========>                                         | 142/795 - 24.46it/s[K  |=========>                                        | 149/795 - 24.81it/s[K
+[DEBUG] model.cpp:1403 - loading tensors from /sdcard/Download/qwen_3_4b-Q4_0.gguf
+  |=========>                                        | 149/795 - 24.81it/s[K  |=========>                                        | 150/795 - 24.17it/s[K  |=========>                                        | 150/795 - 23.42it/s[K  |==========>                                       | 164/795 - 24.83it/s[K  |===========>                                      | 176/795 - 25.86it/s[K  |============>                                     | 191/795 - 27.26it/s[K  |=============>                                    | 208/795 - 28.86it/s[K  |==============>                                   | 224/795 - 30.24it/s[K  |===============>                                  | 241/795 - 31.68it/s[K  |===============>                                  | 253/795 - 32.41it/s[K  |=================>                                | 271/795 - 33.85it/s[K  |=================>                                | 286/795 - 34.85it/s[K  |===================>                              | 306/795 - 36.40it/s[K  |====================>                             | 319/795 - 37.06it/s[K  |=====================>                            | 339/795 - 38.49it/s[K  |======================>                           | 351/795 - 38.97it/s[K  |=======================>                          | 372/795 - 40.40it/s[K  |========================>                         | 385/795 - 40.93it/s[K  |=========================>                        | 405/795 - 42.15it/s[K  |==========================>                       | 418/795 - 42.62it/s[K  |===========================>                      | 438/795 - 43.76it/s[K  |============================>                     | 450/795 - 44.08it/s[K  |=============================>                    | 468/795 - 44.97it/s[K  |==============================>                   | 483/795 - 45.53it/s[K  |===============================>                  | 501/795 - 46.35it/s[K  |================================>                 | 515/795 - 46.78it/s[K  |=================================>                | 528/795 - 47.11it/s[K  |==================================>               | 547/795 - 47.95it/s[K
+[DEBUG] model.cpp:1403 - loading tensors from /sdcard/Download/flux2-vae.safetensors
+  |==================================>               | 547/795 - 47.95it/s[K  |========================================>         | 643/795 - 55.39it/s[K  |==================================================| 795/795 - 67.32it/s[K
+[INFO ] model.cpp:1629 - loading tensors completed, taking 11.81s (process: 0.00s, read: 4.47s, memcpy: 0.00s, convert: 0.04s, copy_to_backend: 6.85s)
+[DEBUG] stable-diffusion.cpp:1107 - finished loaded file
+[INFO ] stable-diffusion.cpp:1180 - total params memory size = 4407.52MB (VRAM 4407.52MB, RAM 0.00MB): text_encoders 2158.46MB(VRAM), diffusion_model 2152.34MB(VRAM), vae 96.72MB(VRAM), controlnet 0.00MB(VRAM), pmid 0.00MB(VRAM)
+[INFO ] stable-diffusion.cpp:1259 - running in Flux2 FLOW mode
+[DEBUG] stable-diffusion.cpp:3889 - generate_image 1024x1024
+[INFO ] stable-diffusion.cpp:3923 - sampling using Euler method
+[DEBUG] denoiser.hpp:798  - Flux2FlowDenoiser: set shift to 2.291
+[INFO ] denoiser.hpp:494  - get_sigmas with discrete scheduler
+[INFO ] stable-diffusion.cpp:4050 - TXT2IMG
+[INFO ] conditioner.hpp:1848 - Flux2-Klein max token length overridden by env: 256
+[DEBUG] conditioner.hpp:1718 - parse '<|im_start|>user
+a lovely cat<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+' to [['<|im_start|>user
+', 1], ['a lovely cat', 1], ['<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+', 1], ]
+[DEBUG] llm.hpp:414  - split prompt "<|im_start|>user
+" to tokens ["<|im_start|>", "user", "Ċ", ]
+[DEBUG] llm.hpp:414  - split prompt "a lovely cat" to tokens ["a", "Ġlovely", "Ġcat", ]
+[DEBUG] llm.hpp:414  - split prompt "<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+" to tokens ["<|im_end|>", "Ċ", "<|im_start|>", "assistant", "Ċ", "<think>", "ĊĊ", "</think>", "ĊĊ", ]
+[DEBUG] llm.hpp:358  - token length: 256
+[DEBUG] ggml_extend.hpp:1864 - qwen3 compute buffer size: 56.75 MB(VRAM)
+[DEBUG] conditioner.hpp:1971 - computing condition graph completed, taking 1262 ms
+[INFO ] stable-diffusion.cpp:3646 - get_learned_condition completed, taking 1265 ms
+[INFO ] stable-diffusion.cpp:3773 - generating image: 1/1 - seed 42
+[DEBUG] ggml_extend.hpp:1864 - flux compute buffer size: 1017.25 MB(VRAM)
+  |============>                                     | 1/4 - 42.50s/it[K  |=========================>                        | 2/4 - 42.98s/it[K  |=====================================>            | 3/4 - 43.33s/it[K  |==================================================| 4/4 - 43.73s/it[K
+[INFO ] stable-diffusion.cpp:3815 - sampling completed, taking 175.60s
+[INFO ] stable-diffusion.cpp:3819 - dumped latent x0 to '/data/local/tmp/sd_bench/step13_t1_q096_vaeconvdirect_latent.tensor'
+[INFO ] stable-diffusion.cpp:3831 - generating 1 latent images completed, taking 175.92s
+[INFO ] stable-diffusion.cpp:3834 - decoding 1 latents
+[DEBUG] ggml_extend.hpp:1864 - vae compute buffer size: 2562.00 MB(VRAM)
+[DEBUG] stable-diffusion.cpp:3041 - computing vae decode graph completed, taking 35.76s
+[INFO ] stable-diffusion.cpp:3844 - latent 1 decoded, taking 35.76s
+[INFO ] stable-diffusion.cpp:3848 - decode_first_stage completed, taking 35.76s
+[INFO ] stable-diffusion.cpp:4158 - generate_image completed in 212.97s
+[INFO ] main.cpp:1711 - save result image 0 to '/sdcard/Download/step13_t1_q096_vaeconvdirect_phone.png' (success)

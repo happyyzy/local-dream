@@ -1,1 +1,4 @@
 date_utc,model,resolution,steps,sampler,samples,median_ms,p90_ms,notes
+2026-01-26,sdxl,1024,20,qnn_unet_profile,1,3437.27,3437.27,UNet-only QNN graph execute (not end-to-end image). Source: /home/happyyzy/output/sdxl_b1_1024_prof_detail_20260126_1621/sdxl_profile.csv Graph 0 EXECUTE=3437273us.
+2026-02-15,z_image_turbo_q4,1024,4,euler,1,212970.00,212970.00,Phone adb e2e generation. Source: /data/local/tmp/sd_bench/step13_full_run.log line generate_image completed in 212.97s.
+2026-02-18,z_image_turbo_q4,1024,20,euler,1,32870.00,32870.00,"Phone adb VAE decode stage only (not end-to-end image). Source: run_step20_qcomml_1024_fallback_v_phone.log line computing vae decode graph completed, taking 32.87s."

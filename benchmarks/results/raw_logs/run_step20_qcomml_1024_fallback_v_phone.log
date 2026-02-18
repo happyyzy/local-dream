@@ -1,0 +1,298 @@
+[DEBUG] main.cpp:1971 - version: stable-diffusion.cpp version adreno-step19-src-4-ge917251+, commit e917251
+[DEBUG] main.cpp:1972 - System Info: 
+    SSE3 = 0 |     AVX = 0 |     AVX2 = 0 |     AVX512 = 0 |     AVX512_VBMI = 0 |     AVX512_VNNI = 0 |     FMA = 0 |     NEON = 1 |     ARM_FMA = 1 |     F16C = 0 |     FP16_VA = 0 |     WASM_SIMD = 0 |     VSX = 0 | 
+[DEBUG] main.cpp:1973 - SDCliParams {
+  mode: img_gen,
+  output_path: "/data/local/tmp/sd_bench/step20_qcomml_1024_fallback_v.png",
+  load_latent_path: "/data/local/tmp/sd_bench/step19_portrait_s8_latent_v2.tensor",
+  verbose: true,
+  color: false,
+  canny_preprocess: false,
+  convert_name: false,
+  preview_method: none,
+  preview_interval: 1,
+  preview_path: "preview.png",
+  preview_fps: 16,
+  taesd_preview: false,
+  preview_noisy: false,
+  llm_embed_only: false,
+  llm_embed_id: -1,
+  llm_embed_n: 1,
+  llm_embed_dump: "llm_embed_only.tensor",
+  llm_embed_arch: "qwen3",
+  llm_forward_only: false,
+  llm_generate_only: false,
+  llm_max_new_tokens: 32,
+  llm_forward_dump: "",
+  llm_generate_dump: "",
+  llm_version: "flux2_klein",
+  q4_matmul_bench: false,
+  q4_weight: "q_proj",
+  q4_n_token: 1,
+  q4_input: "",
+  q4_dump: "q4_matmul.tensor",
+  rmsnorm_bench: false,
+  rmsnorm_weight: "q_norm",
+  rmsnorm_input: "",
+  rmsnorm_dump: "rmsnorm.tensor",
+  rmsnorm_eps: 1e-06,
+  attn_bench: false,
+  attn_q_input: "",
+  attn_k_input: "",
+  attn_v_input: "",
+  attn_n_head: 32,
+  attn_dump: "attn.tensor",
+  flux_fwd_bench: false,
+  flux_bench_runs: 1,
+  flux_bench_warmup: 0,
+  flux_bench_ctx: 256
+}
+[DEBUG] main.cpp:1974 - SDContextParams {
+  n_threads: 1,
+  model_path: "",
+  clip_l_path: "",
+  clip_g_path: "",
+  clip_vision_path: "",
+  t5xxl_path: "",
+  llm_path: "/data/local/tmp/sd_bench/qwen_3_4b-Q4_0.gguf",
+  llm_vision_path: "",
+  cond_c_crossattn_path: "",
+  uncond_c_crossattn_path: "",
+  diffusion_model_path: "/data/local/tmp/sd_bench/z_image_turbo-Q4_0-nobf16.gguf",
+  high_noise_diffusion_model_path: "",
+  vae_path: "/data/local/tmp/sd_bench/ae.safetensors",
+  taesd_path: "",
+  esrgan_path: "",
+  control_net_path: "",
+  embedding_dir: "",
+  embeddings: {
+  }
+  wtype: NONE,
+  tensor_type_rules: "",
+  lora_model_dir: ".",
+  photo_maker_path: "",
+  rng_type: cuda,
+  sampler_rng_type: NONE,
+  flow_shift: INF
+  offload_params_to_cpu: false,
+  enable_mmap: false,
+  control_net_cpu: false,
+  clip_on_cpu: false,
+  vae_on_cpu: false,
+  flash_attn: false,
+  diffusion_flash_attn: false,
+  diffusion_conv_direct: false,
+  vae_conv_direct: true,
+  vae_backend: "qcom_ml",
+  circular: false,
+  circular_x: false,
+  circular_y: false,
+  chroma_use_dit_mask: true,
+  qwen_image_zero_cond_t: false,
+  chroma_use_t5_mask: false,
+  chroma_t5_mask_pad: 1,
+  prediction: NONE,
+  lora_apply_mode: auto,
+  vae_tiling_params: { 0, 0, 0, 0.5, 0, 0 },
+  force_sdxl_vae_conv_scale: false
+}
+[DEBUG] main.cpp:1975 - SDGenerationParams {
+  loras: "{
+  }",
+  high_noise_loras: "{
+  }",
+  prompt: "",
+  negative_prompt: "",
+  clip_skip: -1,
+  width: -1,
+  height: -1,
+  batch_count: 1,
+  init_image_path: "",
+  end_image_path: "",
+  mask_image_path: "",
+  control_image_path: "",
+  ref_image_paths: [],
+  control_video_path: "",
+  auto_resize_ref_image: true,
+  increase_ref_index: false,
+  pm_id_images_dir: "",
+  pm_id_embed_path: "",
+  pm_style_strength: 20,
+  skip_layers: [7, 8, 9],
+  sample_params: (txt_cfg: 7.00, img_cfg: 7.00, distilled_guidance: 3.50, slg.layer_count: 3, slg.layer_start: 0.01, slg.layer_end: 0.20, slg.scale: 0.00, scheduler: NONE, sample_method: NONE, sample_steps: 20, eta: 0.00, shifted_timestep: 0),
+  high_noise_skip_layers: [7, 8, 9],
+  high_noise_sample_params: (txt_cfg: 7.00, img_cfg: 7.00, distilled_guidance: 3.50, slg.layer_count: 3, slg.layer_start: 0.01, slg.layer_end: 0.20, slg.scale: 0.00, scheduler: NONE, sample_method: NONE, sample_steps: 20, eta: 0.00, shifted_timestep: 0),
+  custom_sigmas: [],
+  cache_mode: "",
+  cache_option: "",
+  cache: disabled (threshold=1, start=0.15, end=0.95),
+  moe_boundary: 0.875,
+  video_frames: 1,
+  fps: 16,
+  vace_strength: 1,
+  strength: 0.75,
+  control_strength: 0.9,
+  seed: 42,
+  upscale_repeats: 1,
+  upscale_tile_size: 128,
+}
+[CLML] clGetPlatformIDs...
+[CLML] clGetPlatformIDs result=0 platform=0x7353d35ac0
+[CLML] clGetDeviceIDs...
+[CLML] clGetDeviceIDs result=0 device=0x73485c57d0
+[CLML] clCreateContext...
+[CLML] clCreateContext result=0 context=0xb400007453e4cf90
+[CLML] clCreateCommandQueue...
+[CLML] clCreateCommandQueue result=0 queue=0xb4000073e3e50390
+[CLML] clGetDeviceInfo size...
+[CLML] clGetDeviceInfo size result=0 bytes=1584
+[CLML] clGetDeviceInfo extensions...
+[CLML] clGetDeviceInfo extensions result=0
+[INFO ] stable-diffusion.cpp:639  - QCOM ML VAE bridge ready (lib=/data/local/tmp/sd_bench/libsd_qcom_ml_vae.so, model_dir=/data/local/tmp/sd_bench/qcom_ml_zimage_ae, disable_mnn_attn=1, fallback_attn_16384=1)
+[DEBUG] stable-diffusion.cpp:571  - Using OpenCL backend
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: selected platform: 'QUALCOMM Snapdragon(TM)'
+[INFO ] ggml_extend.hpp:83   - 
+ggml_opencl: device: 'QUALCOMM Adreno(TM) 830 (OpenCL 3.0 Adreno(TM) 830)'
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: OpenCL driver: OpenCL 3.0 QUALCOMM build: 0800.56.1 Compiler E031.47.18.42
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: vector subgroup broadcast support: true
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: device FP16 support: true
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: mem base addr align: 128
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: max mem alloc size: 1024 MB
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: device max image buffer size (pixels): 134217728
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: device max workgroup size: 1024
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: SVM coarse grain buffer support: true
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: SVM fine grain buffer support: true
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: SVM fine grain system support: false
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: SVM atomics support: true
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: flattening quantized weights representation as struct of arrays (GGML_OPENCL_SOA_Q)
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: using kernels optimized for Adreno (GGML_OPENCL_USE_ADRENO_KERNELS)
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: loading OpenCL kernels
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: selective full-f32 activation reads enabled for q4 gemm kernel
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - .
+[DEBUG] ggml_extend.hpp:92   - 
+[INFO ] ggml_extend.hpp:83   - ggml_opencl: default device: 'QUALCOMM Adreno(TM) 830 (OpenCL 3.0 Adreno(TM) 830)'
+[INFO ] stable-diffusion.cpp:694  - loading diffusion model from '/data/local/tmp/sd_bench/z_image_turbo-Q4_0-nobf16.gguf'
+[INFO ] model.cpp:370  - load /data/local/tmp/sd_bench/z_image_turbo-Q4_0-nobf16.gguf using gguf format
+[DEBUG] model.cpp:416  - init from '/data/local/tmp/sd_bench/z_image_turbo-Q4_0-nobf16.gguf'
+[INFO ] stable-diffusion.cpp:741  - loading llm from '/data/local/tmp/sd_bench/qwen_3_4b-Q4_0.gguf'
+[INFO ] model.cpp:370  - load /data/local/tmp/sd_bench/qwen_3_4b-Q4_0.gguf using gguf format
+[DEBUG] model.cpp:416  - init from '/data/local/tmp/sd_bench/qwen_3_4b-Q4_0.gguf'
+[INFO ] stable-diffusion.cpp:755  - loading vae from '/data/local/tmp/sd_bench/ae.safetensors'
+[INFO ] model.cpp:373  - load /data/local/tmp/sd_bench/ae.safetensors using safetensors format
+[DEBUG] model.cpp:507  - init from '/data/local/tmp/sd_bench/ae.safetensors', prefix = 'vae.'
+[INFO ] stable-diffusion.cpp:771  - Version: Z-Image 
+[INFO ] stable-diffusion.cpp:799  - Weight type stat:                      f32: 244  |     f16: 43   |    q4_0: 808  
+[INFO ] stable-diffusion.cpp:800  - Conditioner weight type stat:         q4_0: 398  
+[INFO ] stable-diffusion.cpp:801  - Diffusion model weight type stat:      f16: 43   |    q4_0: 410  
+[INFO ] stable-diffusion.cpp:802  - VAE weight type stat:                  f32: 244  
+[DEBUG] stable-diffusion.cpp:804  - ggml tensor size = 400 bytes
+[DEBUG] llm.hpp:476  - merges size 151387
+[DEBUG] llm.hpp:508  - vocab size: 151669
+[DEBUG] llm.hpp:1563 - llm: num_layers = 36, vocab_size = 151936, hidden_size = 2560, intermediate_size = 9728
+[DEBUG] ggml_extend.hpp:2127 - qwen3 params backend buffer size =  2158.46 MB(VRAM) (398 tensors)
+[DEBUG] ggml_extend.hpp:2127 - z_image params backend buffer size =  3309.39 MB(VRAM) (453 tensors)
+[INFO ] stable-diffusion.cpp:1029 - VAE runtime backend: qcom_ml
+[INFO ] stable-diffusion.cpp:1053 - Using Conv2d direct in the vae model
+[DEBUG] ggml_extend.hpp:2127 - vae params backend buffer size =  94.57 MB(VRAM) (138 tensors)
+[DEBUG] stable-diffusion.cpp:1203 - loading weights
+[DEBUG] model.cpp:1381 - using 1 threads for model loading
+[DEBUG] model.cpp:1403 - loading tensors from /data/local/tmp/sd_bench/z_image_turbo-Q4_0-nobf16.gguf
+  |>                                                 | 12/1095 - 59.11it/s[K  |=>                                                | 23/1095 - 57.07it/s[K  |=>                                                | 39/1095 - 64.68it/s[K  |==>                                               | 49/1095 - 61.02it/s[K  |==>                                               | 60/1095 - 59.82it/s[K  |===>                                              | 67/1095 - 55.69it/s[K  |===>                                              | 79/1095 - 56.31it/s[K  |====>                                             | 91/1095 - 56.77it/s[K  |====>                                             | 104/1095 - 57.68it/s[K  |=====>                                            | 114/1095 - 56.91it/s[K  |=====>                                            | 119/1095 - 54.02it/s[K  |=====>                                            | 131/1095 - 54.49it/s[K  |======>                                           | 143/1095 - 54.92it/s[K  |======>                                           | 153/1095 - 54.56it/s[K  |=======>                                          | 158/1095 - 52.60it/s[K  |=======>                                          | 170/1095 - 53.06it/s[K  |========>                                         | 182/1095 - 53.47it/s[K  |========>                                         | 192/1095 - 53.27it/s[K  |========>                                         | 197/1095 - 51.79it/s[K  |=========>                                        | 209/1095 - 52.20it/s[K  |==========>                                       | 222/1095 - 52.81it/s[K  |==========>                                       | 234/1095 - 53.12it/s[K  |==========>                                       | 240/1095 - 52.12it/s[K  |===========>                                      | 249/1095 - 51.82it/s[K  |===========>                                      | 261/1095 - 52.15it/s[K  |============>                                     | 273/1095 - 52.45it/s[K  |============>                                     | 281/1095 - 51.99it/s[K  |=============>                                    | 288/1095 - 51.38it/s[K  |=============>                                    | 300/1095 - 51.68it/s[K  |==============>                                   | 312/1095 - 51.96it/s[K  |==============>                                   | 320/1095 - 51.56it/s[K  |==============>                                   | 327/1095 - 51.05it/s[K  |===============>                                  | 339/1095 - 51.32it/s[K  |===============>                                  | 348/1095 - 51.13it/s[K  |================>                                 | 353/1095 - 50.39it/s[K  |================>                                 | 366/1095 - 50.79it/s[K  |=================>                                | 378/1095 - 51.04it/s[K  |=================>                                | 387/1095 - 50.88it/s[K  |==================>                               | 400/1095 - 51.24it/s[K  |==================>                               | 413/1095 - 51.59it/s[K  |===================>                              | 418/1095 - 50.93it/s[K  |===================>                              | 430/1095 - 51.15it/s[K  |====================>                             | 443/1095 - 51.47it/s[K  |====================>                             | 453/1095 - 51.43it/s[K
+[DEBUG] model.cpp:1403 - loading tensors from /data/local/tmp/sd_bench/qwen_3_4b-Q4_0.gguf
+  |====================>                             | 453/1095 - 51.43it/s[K  |====================>                             | 454/1095 - 50.40it/s[K  |====================>                             | 456/1095 - 49.52it/s[K  |=====================>                            | 472/1095 - 50.17it/s[K  |======================>                           | 490/1095 - 51.00it/s[K  |=======================>                          | 512/1095 - 52.20it/s[K  |========================>                         | 533/1095 - 53.25it/s[K  |=========================>                        | 553/1095 - 54.17it/s[K  |=========================>                        | 568/1095 - 54.57it/s[K  |==========================>                       | 589/1095 - 55.52it/s[K  |===========================>                      | 610/1095 - 56.43it/s[K  |============================>                     | 632/1095 - 57.41it/s[K  |=============================>                    | 649/1095 - 57.90it/s[K  |==============================>                   | 666/1095 - 58.37it/s[K  |===============================>                  | 687/1095 - 59.18it/s[K  |================================>                 | 703/1095 - 59.53it/s[K  |================================>                 | 721/1095 - 60.03it/s[K  |=================================>                | 742/1095 - 60.77it/s[K  |==================================>               | 762/1095 - 61.40it/s[K  |===================================>              | 777/1095 - 61.62it/s[K  |====================================>             | 797/1095 - 62.22it/s[K  |=====================================>            | 813/1095 - 62.49it/s[K  |=====================================>            | 831/1095 - 62.91it/s[K  |======================================>           | 851/1095 - 63.44it/s[K
+[DEBUG] model.cpp:1403 - loading tensors from /data/local/tmp/sd_bench/ae.safetensors
+  |======================================>           | 851/1095 - 63.44it/s[K  |=============================================>    | 989/1095 - 72.65it/s[K  |==================================================| 1095/1095 - 79.26it/s[K
+[INFO ] model.cpp:1629 - loading tensors completed, taking 13.82s (process: 0.00s, read: 5.15s, memcpy: 0.00s, convert: 0.04s, copy_to_backend: 8.10s)
+[DEBUG] stable-diffusion.cpp:1238 - finished loaded file
+[INFO ] stable-diffusion.cpp:1311 - total params memory size = 5562.42MB (VRAM 5562.42MB, RAM 0.00MB): text_encoders 2158.46MB(VRAM), diffusion_model 3309.39MB(VRAM), vae 94.57MB(VRAM), controlnet 0.00MB(VRAM), pmid 0.00MB(VRAM)
+[INFO ] stable-diffusion.cpp:1380 - running in FLOW mode
+[WARN ] stable-diffusion.cpp:3180 - QCOM ML VAE decode failed: attention sequence length 16384 is not supported by current qcom_ml attention path. Falling back to ggml.
+[DEBUG] ggml_extend.hpp:1865 - vae compute buffer size: 2561.00 MB(VRAM)
+[DEBUG] stable-diffusion.cpp:3266 - computing vae decode graph completed, taking 32.87s
+[INFO ] main.cpp:1892 - save result image 0 to '/data/local/tmp/sd_bench/step20_qcomml_1024_fallback_v.png' (success)
