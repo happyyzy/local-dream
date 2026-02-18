@@ -1,5 +1,13 @@
 # Model Conversion Guide (SD1.5 Only)
 
+> [!NOTE]
+> Fork extension for SDXL 512/1024 milestone assets is tracked in:
+> - `scripts/convert_sdxl_512.sh`
+> - `scripts/convert_sdxl_1024.sh`
+> - `assets/calibration/`
+> - `docs/performance/methodology.md`
+
+
 ## Overview
 
 This guide will help you convert your models to be compatible with the NPU for optimized performance on supported devices.

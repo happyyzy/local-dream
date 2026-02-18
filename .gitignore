@@ -13,3 +13,10 @@ app/release
 app/basic
 app/filter
 app/src/main/assets/qnnlibs
+# milestone-local-outputs
+out/
+artifacts/
+tmp/
+benchmarks/results/*.local.csv
+.env
+.venv/

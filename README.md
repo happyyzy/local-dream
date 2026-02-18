@@ -24,6 +24,32 @@ If you like it, please consider [sponsor](https://github.com/xororz/local-dream?
 >
 > You can join our [telegram group](https://t.me/local_dream) for discussion or help with testing.
 
+## Fork Milestone (happyyzy)
+
+> [!IMPORTANT]
+> This section describes **fork-only** work on branch `main`. It is not an upstream feature claim.
+
+This fork keeps three lines:
+- `upstream-sync`: sync-only line with `xororz/local-dream`.
+- `main`: PR-ready line and default showcase line.
+- `exp/*`: debugging / experiments.
+
+Current milestone focus:
+- SDXL 512/1024 NPU path validated on firmware `v79`.
+- Reproducible benchmark reporting at `benchmarks/results/benchmark_results.csv`.
+- Public showcase template: `docs/performance/showcase.md` (images + speed table).
+- Benchmark image assets and metadata at `benchmarks/images/`.
+- Governance and contribution policy in `docs/` and `CONTRIBUTING.md`.
+
+Relevant entry points:
+- `docs/branching.md`
+- `docs/performance/methodology.md`
+- `docs/fork_bootstrap.md`
+- `scripts/convert_sdxl_512.sh`
+- `scripts/convert_sdxl_1024.sh`
+- `scripts/prepare_calibration_manifest.py`
+- `scripts/run_benchmark.py`
+
 ## 🚀 Quick Start
 
 1. **Download**: Get the APK from [Releases](https://github.com/xororz/local-dream/releases) or [Google Play](https://play.google.com/store/apps/details?id=io.github.xororz.localdream)(NSFW filtered)

@@ -1,1 +1,10 @@
 *tokenizer.json binary
+# milestone-lfs: use LFS for large generated artifacts
+assets/models/** filter=lfs diff=lfs merge=lfs -text
+assets/calibration/raw/** filter=lfs diff=lfs merge=lfs -text
+benchmarks/images/*.png filter=lfs diff=lfs merge=lfs -text
+benchmarks/images/*.jpg filter=lfs diff=lfs merge=lfs -text
+benchmarks/images/*.jpeg filter=lfs diff=lfs merge=lfs -text
+benchmarks/images/*.webp filter=lfs diff=lfs merge=lfs -text
+*.safetensors filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
