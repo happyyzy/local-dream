@@ -1,0 +1,19 @@
+{
+  "steps": 20,
+  "cfg": 7,
+  "seed": 708751669,
+  "prompt": "masterpiece, best quality, ultra detailed fantasy concept art, ancient stone castle on a cliff, massive dragon perched on tower, dramatic storm clouds, lightning in the distance, glowing embers and smoke, epic scale, strong silhouette, painterly details, intricate armor-like dragon scales, atmospheric depth, cinematic lighting, high contrast, artstation style, sharp details",
+  "negativePrompt": "worst quality, low quality, lowres, blurry, bad anatomy, deformed wings, broken perspective, muddy colors, flat lighting, messy brushwork, watermark, text, logo, jpeg artifacts, low detail",
+  "generationTime": "34.8s",
+  "size": "1024x1024",
+  "runOnCpu": false,
+  "denoiseStrength": 0.6,
+  "useOpenCL": false,
+  "scheduler": "euler",
+  "timestamp": 1769163563122,
+  "source_package": "io.github.xororz.localdream",
+  "device_model": "2410DPN6CC",
+  "soc": "SM8750",
+  "system_version": "HyperOS 3.0.7.0",
+  "speed_s_per_it": 1.74
+}

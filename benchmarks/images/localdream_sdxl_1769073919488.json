@@ -1,0 +1,19 @@
+{
+  "steps": 20,
+  "cfg": 7,
+  "seed": 3332264532,
+  "prompt": "masterpiece, best quality, ultra detailed, cinematic portrait photo, 35mm lens, shallow depth of field, soft bokeh, neon street at night, light rain, wet asphalt reflections, young adult, natural skin texture, subtle freckles, rim light, volumetric light, city lights, high dynamic range, film grain, teal and orange color grading, sharp focus on eyes",
+  "negativePrompt": "worst quality, low quality, lowres, blurry, out of focus, bad anatomy, bad hands, extra fingers, missing fingers, deformed, disfigured, cross-eye, duplicate, watermark, text, logo, jpeg artifacts, oversaturated, plastic skin, doll-like, uncanny",
+  "generationTime": "32.8s",
+  "size": "1024x1024",
+  "runOnCpu": false,
+  "denoiseStrength": 0.6,
+  "useOpenCL": false,
+  "scheduler": "euler",
+  "timestamp": 1769073919488,
+  "source_package": "io.github.xororz.localdream",
+  "device_model": "2410DPN6CC",
+  "soc": "SM8750",
+  "system_version": "HyperOS 3.0.7.0",
+  "speed_s_per_it": 1.64
+}

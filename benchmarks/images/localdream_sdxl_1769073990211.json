@@ -1,0 +1,19 @@
+{
+  "steps": 20,
+  "cfg": 7,
+  "seed": 2861933997,
+  "prompt": "masterpiece, best quality, ultra detailed, wide angle cityscape, futuristic megacity, cyberpunk street market, crowds, holographic signage, overhead cables, steaming vents, reflective glass skyscrapers, atmospheric perspective, volumetric fog, god rays, dynamic composition, high contrast, crisp details, ultra realistic, 8k, documentary street photography style",
+  "negativePrompt": "worst quality, low quality, lowres, blurry, messy composition, bad perspective, distorted buildings, duplicate signs, gibberish text, watermark, logo, text, banding, chromatic aberration (too strong), noise (too much)",
+  "generationTime": "32.8s",
+  "size": "1024x1024",
+  "runOnCpu": false,
+  "denoiseStrength": 0.6,
+  "useOpenCL": false,
+  "scheduler": "euler",
+  "timestamp": 1769073990211,
+  "source_package": "io.github.xororz.localdream",
+  "device_model": "2410DPN6CC",
+  "soc": "SM8750",
+  "system_version": "HyperOS 3.0.7.0",
+  "speed_s_per_it": 1.64
+}

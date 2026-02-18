@@ -1,53 +1,0 @@
-[CLML] clGetPlatformIDs...
-[CLML] clGetPlatformIDs result=0 platform=0x76d05f7ac0
-[CLML] clGetDeviceIDs...
-[CLML] clGetDeviceIDs result=0 device=0x76c2bd67d0
-[CLML] clCreateContext...
-[CLML] clCreateContext result=0 context=0xb400007931f72190
-[CLML] clCreateCommandQueue...
-[CLML] clCreateCommandQueue result=0 queue=0xb400007771f6b070
-[CLML] clGetDeviceInfo size...
-[CLML] clGetDeviceInfo size result=0 bytes=1584
-[CLML] clGetDeviceInfo extensions...
-[CLML] clGetDeviceInfo extensions result=0
-[INFO ] stable-diffusion.cpp:639  - QCOM ML VAE bridge ready (lib=/data/local/tmp/sd_bench/libsd_qcom_ml_vae.so, model_dir=/data/local/tmp/sd_bench/qcom_ml_zimage_ae, disable_mnn_attn=1, fallback_attn_16384=1)
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: selected platform: 'QUALCOMM Snapdragon(TM)'
-[INFO ] ggml_extend.hpp:83   - 
-ggml_opencl: device: 'QUALCOMM Adreno(TM) 830 (OpenCL 3.0 Adreno(TM) 830)'
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: OpenCL driver: OpenCL 3.0 QUALCOMM build: 0800.56.1 Compiler E031.47.18.42
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: vector subgroup broadcast support: true
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: device FP16 support: true
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: mem base addr align: 128
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: max mem alloc size: 1024 MB
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: device max image buffer size (pixels): 134217728
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: device max workgroup size: 1024
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: SVM coarse grain buffer support: true
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: SVM fine grain buffer support: true
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: SVM fine grain system support: false
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: SVM atomics support: true
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: flattening quantized weights representation as struct of arrays (GGML_OPENCL_SOA_Q)
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: using kernels optimized for Adreno (GGML_OPENCL_USE_ADRENO_KERNELS)
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: loading OpenCL kernels
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: selective full-f32 activation reads enabled for q4 gemm kernel
-[INFO ] ggml_extend.hpp:83   - ggml_opencl: default device: 'QUALCOMM Adreno(TM) 830 (OpenCL 3.0 Adreno(TM) 830)'
-[INFO ] stable-diffusion.cpp:694  - loading diffusion model from '/data/local/tmp/sd_bench/z_image_turbo-Q4_0-nobf16.gguf'
-[INFO ] model.cpp:370  - load /data/local/tmp/sd_bench/z_image_turbo-Q4_0-nobf16.gguf using gguf format
-[INFO ] stable-diffusion.cpp:741  - loading llm from '/data/local/tmp/sd_bench/qwen_3_4b-Q4_0.gguf'
-[INFO ] model.cpp:370  - load /data/local/tmp/sd_bench/qwen_3_4b-Q4_0.gguf using gguf format
-[INFO ] stable-diffusion.cpp:755  - loading vae from '/data/local/tmp/sd_bench/ae.safetensors'
-[INFO ] model.cpp:373  - load /data/local/tmp/sd_bench/ae.safetensors using safetensors format
-[INFO ] stable-diffusion.cpp:771  - Version: Z-Image 
-[INFO ] stable-diffusion.cpp:799  - Weight type stat:                      f32: 244  |     f16: 43   |    q4_0: 808  
-[INFO ] stable-diffusion.cpp:800  - Conditioner weight type stat:         q4_0: 398  
-[INFO ] stable-diffusion.cpp:801  - Diffusion model weight type stat:      f16: 43   |    q4_0: 410  
-[INFO ] stable-diffusion.cpp:802  - VAE weight type stat:                  f32: 244  
-[INFO ] stable-diffusion.cpp:1029 - VAE runtime backend: qcom_ml
-[INFO ] stable-diffusion.cpp:1053 - Using Conv2d direct in the vae model
-  |>                                                 | 12/1095 - 60.00it/s[K  |=>                                                | 22/1095 - 55.00it/s[K  |=>                                                | 36/1095 - 60.00it/s[K  |=>                                                | 41/1095 - 51.25it/s[K  |==>                                               | 53/1095 - 53.00it/s[K  |==>                                               | 65/1095 - 54.17it/s[K  |===>                                              | 75/1095 - 53.57it/s[K  |===>                                              | 84/1095 - 52.50it/s[K  |====>                                             | 93/1095 - 51.67it/s[K  |=====>                                            | 110/1095 - 54.97it/s[K  |=====>                                            | 119/1095 - 54.07it/s[K  |======>                                           | 132/1095 - 54.98it/s[K  |======>                                           | 145/1095 - 55.75it/s[K  |=======>                                          | 158/1095 - 56.41it/s[K  |=======>                                          | 171/1095 - 56.98it/s[K  |========>                                         | 184/1095 - 57.48it/s[K  |========>                                         | 197/1095 - 57.92it/s[K  |=========>                                        | 210/1095 - 58.32it/s[K  |==========>                                       | 223/1095 - 58.65it/s[K  |===========>                                      | 242/1095 - 60.47it/s[K  |===========>                                      | 255/1095 - 60.69it/s[K  |============>                                     | 268/1095 - 60.88it/s[K  |============>                                     | 281/1095 - 61.06it/s[K  |=============>                                    | 292/1095 - 60.81it/s[K  |=============>                                    | 301/1095 - 60.18it/s[K  |==============>                                   | 314/1095 - 60.36it/s[K  |==============>                                   | 327/1095 - 60.53it/s[K  |===============>                                  | 340/1095 - 60.68it/s[K  |================>                                 | 353/1095 - 60.83it/s[K  |================>                                 | 366/1095 - 60.97it/s[K  |=================>                                | 379/1095 - 61.10it/s[K  |=================>                                | 392/1095 - 61.22it/s[K  |==================>                               | 405/1095 - 61.34it/s[K  |===================>                              | 418/1095 - 61.43it/s[K  |===================>                              | 431/1095 - 61.54it/s[K  |====================>                             | 443/1095 - 61.49it/s[K  |====================>                             | 453/1095 - 61.17it/s[K
-  |====================>                             | 453/1095 - 61.17it/s[K  |====================>                             | 454/1095 - 59.68it/s[K  |====================>                             | 454/1095 - 58.15it/s[K  |=====================>                            | 467/1095 - 58.32it/s[K  |=====================>                            | 480/1095 - 58.49it/s[K  |======================>                           | 501/1095 - 59.59it/s[K  |=======================>                          | 522/1095 - 60.65it/s[K  |========================>                         | 541/1095 - 61.43it/s[K  |=========================>                        | 556/1095 - 61.73it/s[K  |==========================>                       | 574/1095 - 62.34it/s[K  |==========================>                       | 590/1095 - 62.72it/s[K  |===========================>                      | 611/1095 - 63.60it/s[K  |============================>                     | 632/1095 - 64.44it/s[K  |=============================>                    | 651/1095 - 65.05it/s[K  |==============================>                   | 666/1095 - 65.24it/s[K  |===============================>                  | 687/1095 - 66.01it/s[K  |===============================>                  | 700/1095 - 65.99it/s[K  |================================>                 | 720/1095 - 66.62it/s[K  |=================================>                | 736/1095 - 66.86it/s[K  |==================================>               | 753/1095 - 67.18it/s[K  |===================================>              | 770/1095 - 67.50it/s[K  |===================================>              | 787/1095 - 67.80it/s[K  |====================================>             | 805/1095 - 68.17it/s[K  |=====================================>            | 820/1095 - 68.29it/s[K  |======================================>           | 836/1095 - 68.47it/s[K  |======================================>           | 851/1095 - 68.58it/s[K
-  |======================================>           | 851/1095 - 68.58it/s[K  |============================================>     | 983/1095 - 77.96it/s[K  |==================================================| 1095/1095 - 85.48it/s[K
-[INFO ] model.cpp:1629 - loading tensors completed, taking 12.81s (process: 0.00s, read: 4.15s, memcpy: 0.00s, convert: 0.04s, copy_to_backend: 8.10s)
-[INFO ] stable-diffusion.cpp:1311 - total params memory size = 5562.42MB (VRAM 5562.42MB, RAM 0.00MB): text_encoders 2158.46MB(VRAM), diffusion_model 3309.39MB(VRAM), vae 94.57MB(VRAM), controlnet 0.00MB(VRAM), pmid 0.00MB(VRAM)
-[INFO ] stable-diffusion.cpp:1380 - running in FLOW mode
-[WARN ] stable-diffusion.cpp:3180 - QCOM ML VAE decode failed: attention sequence length 16384 is not supported by current qcom_ml attention path. Falling back to ggml.
-[INFO ] main.cpp:1892 - save result image 0 to '/data/local/tmp/sd_bench/step20_qcomml_1024_fallback.png' (success)

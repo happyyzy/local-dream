@@ -13,13 +13,13 @@
 - 分辨率（如 512 / 1024）
 - 步数（steps）
 - 采样器（sampler）
-- batch size
+- CFG
 - warmup 次数
 
 ## 统计口径
-- 主指标：`median latency (ms)`
-- 辅指标：`p90 latency (ms)`
-- 建议至少记录 5 次有效样本
+- 主指标：`s/it`
+- 补充指标：`median latency (ms)`、`p90 latency (ms)`
+- 其中 `s/it = generationTime / steps`
 
 ## 输出格式
 结果统一写入 `benchmarks/results/benchmark_results.csv`。
@@ -30,6 +30,6 @@
 - `steps`
 - `sampler`
 - `samples`
-- `median_ms`
+- `median_ms`（可由 `s/it * 1000` 换算）
 - `p90_ms`
 - `notes`
