@@ -26,6 +26,8 @@ class GenerationPreferences(private val context: Context) {
         floatPreferencesKey("${modelId}_denoise_strength")
 
     private fun getUseOpenCLKey(modelId: String) = booleanPreferencesKey("${modelId}_use_opencl")
+    private fun getRuntimeBackendKey(modelId: String) =
+        stringPreferencesKey("${modelId}_runtime_backend")
 
     private fun getBatchCountsKey(modelId: String) = intPreferencesKey("${modelId}_batch_counts")
     private fun getSchedulerKey(modelId: String) = stringPreferencesKey("${modelId}_scheduler")
@@ -70,6 +72,7 @@ class GenerationPreferences(private val context: Context) {
         height: Int,
         denoiseStrength: Float,
         useOpenCL: Boolean,
+        runtimeBackend: String,
         batchCounts: Int,
         scheduler: String
     ) {
@@ -83,6 +86,7 @@ class GenerationPreferences(private val context: Context) {
             preferences[getHeightKey(modelId)] = height
             preferences[getDenoiseStrengthKey(modelId)] = denoiseStrength
             preferences[getUseOpenCLKey(modelId)] = useOpenCL
+            preferences[getRuntimeBackendKey(modelId)] = runtimeBackend
             preferences[getBatchCountsKey(modelId)] = batchCounts
             preferences[getSchedulerKey(modelId)] = scheduler
         }
@@ -115,6 +119,10 @@ class GenerationPreferences(private val context: Context) {
                     height = preferences[getHeightKey(modelId)] ?: -1,
                     denoiseStrength = preferences[getDenoiseStrengthKey(modelId)] ?: 0.6f,
                     useOpenCL = preferences[getUseOpenCLKey(modelId)] ?: false,
+                    runtimeBackend = preferences[getRuntimeBackendKey(modelId)]
+                        ?: RuntimeBackend.fromLegacy(
+                            preferences[getUseOpenCLKey(modelId)] ?: false
+                        ).value,
                     batchCounts = preferences[getBatchCountsKey(modelId)] ?: 1,
                     scheduler = preferences[getSchedulerKey(modelId)] ?: "dpm"
                 )
@@ -132,6 +140,7 @@ class GenerationPreferences(private val context: Context) {
             preferences.remove(getHeightKey(modelId))
             preferences.remove(getDenoiseStrengthKey(modelId))
             preferences.remove(getUseOpenCLKey(modelId))
+            preferences.remove(getRuntimeBackendKey(modelId))
             preferences.remove(getBatchCountsKey(modelId))
             preferences.remove(getSchedulerKey(modelId))
         }
@@ -148,6 +157,7 @@ data class GenerationPrefs(
     val height: Int = -1,
     val denoiseStrength: Float = 0.6f,
     val useOpenCL: Boolean = false,
+    val runtimeBackend: String = RuntimeBackend.CPU.value,
     val batchCounts: Int = 1,
     val scheduler: String = "dpm"
 )

@@ -144,6 +144,7 @@ import io.github.xororz.localdream.data.HistoryManager
 import io.github.xororz.localdream.data.ModelRepository
 import io.github.xororz.localdream.data.PatchScanner
 import io.github.xororz.localdream.data.Resolution
+import io.github.xororz.localdream.data.RuntimeBackend
 import io.github.xororz.localdream.data.UpscalerModel
 import io.github.xororz.localdream.data.UpscalerRepository
 import io.github.xororz.localdream.service.BackendService
@@ -183,8 +184,14 @@ private fun checkStoragePermission(context: Context): Boolean {
     }
 }
 
+private enum class RefSlot {
+    PRIMARY,
+    SECONDARY,
+}
+
 private suspend fun checkBackendHealth(
     backendState: StateFlow<BackendService.BackendState>,
+    runtimeBackend: RuntimeBackend,
     onHealthy: () -> Unit,
     onUnhealthy: () -> Unit
 ) = withContext(Dispatchers.IO) {
@@ -213,8 +220,13 @@ private suspend fun checkBackendHealth(
             }
 
             try {
+                val healthUrl = if (runtimeBackend == RuntimeBackend.ADRENO) {
+                    "http://localhost:8081/sdapi/v1/options"
+                } else {
+                    "http://localhost:8081/health"
+                }
                 val request = Request.Builder()
-                    .url("http://localhost:8081/health")
+                    .url(healthUrl)
                     .get()
                     .build()
 
@@ -238,6 +250,15 @@ private suspend fun checkBackendHealth(
     }
 }
 
+private fun runtimeLabel(runOnCpu: Boolean, runtimeBackend: RuntimeBackend): String {
+    if (!runOnCpu) return "NPU"
+    return when (runtimeBackend) {
+        RuntimeBackend.CPU -> "CPU"
+        RuntimeBackend.OPENCL -> "GPU"
+        RuntimeBackend.ADRENO -> "Adreno"
+    }
+}
+
 data class GenerationParameters(
     val steps: Int,
     val cfg: Float,
@@ -250,6 +271,7 @@ data class GenerationParameters(
     val runOnCpu: Boolean,
     val denoiseStrength: Float = 0.6f,
     val useOpenCL: Boolean = false,
+    val runtimeBackend: String = RuntimeBackend.CPU.value,
     val scheduler: String = "dpm"
 )
 
@@ -320,11 +342,14 @@ fun ModelRunScreen(
     var seed by remember { mutableStateOf("") }
     var denoiseStrength by remember { mutableStateOf(0.6f) }
     var useOpenCL by remember { mutableStateOf(false) }
+    var runtimeBackend by remember { mutableStateOf(RuntimeBackend.CPU) }
     var batchCounts by remember { mutableStateOf(1) }
     var scheduler by remember { mutableStateOf("dpm") }
     var currentBatchIndex by remember { mutableStateOf(0) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedImageUriRef2 by remember { mutableStateOf<Uri?>(null) }
     var base64EncodeDone by remember { mutableStateOf(false) }
+    var base64EncodeDoneRef2 by remember { mutableStateOf(false) }
     var returnedSeed by remember { mutableStateOf<Long?>(null) }
     var isRunning by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0f) }
@@ -357,7 +382,9 @@ fun ModelRunScreen(
 
     var showCropScreen by remember { mutableStateOf(false) }
     var imageUriForCrop by remember { mutableStateOf<Uri?>(null) }
+    var imageRefSlotForCrop by remember { mutableStateOf(RefSlot.PRIMARY) }
     var croppedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var croppedBitmapRef2 by remember { mutableStateOf<Bitmap?>(null) }
 
     var showInpaintScreen by remember { mutableStateOf(false) }
     var maskBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -394,9 +421,31 @@ fun ModelRunScreen(
                 height = currentHeight,
                 denoiseStrength = denoiseStrength,
                 useOpenCL = useOpenCL,
+                runtimeBackend = runtimeBackend.value,
                 batchCounts = batchCounts,
                 scheduler = scheduler
             )
+        }
+    }
+
+    fun applyRuntimeBackend(newBackend: RuntimeBackend) {
+        if (runtimeBackend == newBackend) return
+        runtimeBackend = newBackend
+        useOpenCL = newBackend == RuntimeBackend.OPENCL
+        saveAllFields()
+
+        if (hasInitialized) {
+            val serviceIntent = Intent(context, BackendService::class.java).apply {
+                action = BackendService.ACTION_RESTART
+                putExtra("modelId", modelId)
+                putExtra("width", currentWidth)
+                putExtra("height", currentHeight)
+                putExtra("use_opencl", useOpenCL)
+                putExtra("runtime_backend", runtimeBackend.value)
+            }
+            context.startForegroundService(serviceIntent)
+            isCheckingBackend = true
+            backendRestartTrigger++
         }
     }
 
@@ -405,7 +454,8 @@ fun ModelRunScreen(
     val onSizeChange = remember {
         { value: Float ->
             val rounded = (value / 64).roundToInt() * 64
-            val newSize = rounded.coerceIn(128, 512)
+            val maxSize = if (runtimeBackend == RuntimeBackend.ADRENO) 1024 else 512
+            val newSize = rounded.coerceIn(128, maxSize)
             currentWidth = newSize
             currentHeight = newSize
             saveAllFields()
@@ -424,30 +474,48 @@ fun ModelRunScreen(
         }
     }
 
-    fun processSelectedImage(uri: Uri) {
+    fun processSelectedImage(uri: Uri, slot: RefSlot) {
         imageUriForCrop = uri
+        imageRefSlotForCrop = slot
         showCropScreen = true
     }
 
     fun handleCropComplete(base64String: String, bitmap: Bitmap, rect: AndroidRect) {
         showCropScreen = false
-        selectedImageUri = imageUriForCrop
+        if (imageRefSlotForCrop == RefSlot.PRIMARY) {
+            selectedImageUri = imageUriForCrop
+            croppedBitmap = bitmap
+            cropRect = rect
+        } else {
+            selectedImageUriRef2 = imageUriForCrop
+            croppedBitmapRef2 = bitmap
+        }
         imageUriForCrop = null
-        croppedBitmap = bitmap
-        cropRect = rect
 
         scope.launch(Dispatchers.IO) {
             try {
-                base64EncodeDone = false
-                val tmpFile = File(context.filesDir, "tmp.txt")
-                tmpFile.writeText(base64String)
-                base64EncodeDone = true
+                if (imageRefSlotForCrop == RefSlot.PRIMARY) {
+                    base64EncodeDone = false
+                    val tmpFile = File(context.filesDir, "tmp.txt")
+                    tmpFile.writeText(base64String)
+                    base64EncodeDone = true
+                } else {
+                    base64EncodeDoneRef2 = false
+                    val tmpFile = File(context.filesDir, "tmp_ref2.txt")
+                    tmpFile.writeText(base64String)
+                    base64EncodeDoneRef2 = true
+                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Save failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                    selectedImageUri = null
-                    croppedBitmap = null
-                    cropRect = null
+                    if (imageRefSlotForCrop == RefSlot.PRIMARY) {
+                        selectedImageUri = null
+                        croppedBitmap = null
+                        cropRect = null
+                    } else {
+                        selectedImageUriRef2 = null
+                        croppedBitmapRef2 = null
+                    }
                 }
             }
         }
@@ -482,16 +550,14 @@ fun ModelRunScreen(
         }
     }
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        PickVisualMedia()
-    ) { uri ->
-        uri?.let { processSelectedImage(it) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->
+        uri?.let { processSelectedImage(it, imageRefSlotForCrop) }
     }
 
     val contentPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
-        uri?.let { processSelectedImage(it) }
+        uri?.let { processSelectedImage(it, imageRefSlotForCrop) }
     }
 
     val requestMediaImagePermissionLauncher = rememberLauncherForActivityResult(
@@ -522,7 +588,8 @@ fun ModelRunScreen(
         }
     }
 
-    fun onSelectImageClick() {
+    fun onSelectImageClick(slot: RefSlot = RefSlot.PRIMARY) {
+        imageRefSlotForCrop = slot
         when {
             // Android 13+
             Build.VERSION.SDK_INT >= 33 -> {
@@ -671,7 +738,8 @@ fun ModelRunScreen(
             cfg = prefs.cfg
             seed = prefs.seed
             denoiseStrength = prefs.denoiseStrength
-            useOpenCL = prefs.useOpenCL
+            runtimeBackend = RuntimeBackend.fromValue(prefs.runtimeBackend)
+            useOpenCL = runtimeBackend == RuntimeBackend.OPENCL
             batchCounts = prefs.batchCounts
             scheduler = prefs.scheduler
 
@@ -691,6 +759,7 @@ fun ModelRunScreen(
                 putExtra("width", currentWidth)
                 putExtra("height", currentHeight)
                 putExtra("use_opencl", useOpenCL)
+                putExtra("runtime_backend", runtimeBackend.value)
             }
             context.startForegroundService(intent)
         }
@@ -784,6 +853,7 @@ fun ModelRunScreen(
                         height = if (model?.runOnCpu == true) generationParamsTmp.height else currentHeight,
                         runOnCpu = model?.runOnCpu ?: false,
                         useOpenCL = generationParamsTmp.useOpenCL,
+                        runtimeBackend = generationParamsTmp.runtimeBackend,
                         scheduler = generationParamsTmp.scheduler
                     )
 
@@ -882,8 +952,7 @@ fun ModelRunScreen(
                 TextButton(
                     onClick = {
                         showOpenCLWarningDialog = false
-                        useOpenCL = true
-                        saveAllFields()
+                        applyRuntimeBackend(RuntimeBackend.OPENCL)
                     }
                 ) {
                     Text(stringResource(R.string.confirm))
@@ -918,12 +987,18 @@ fun ModelRunScreen(
                             if (kotlin.math.abs(oldRatio - newRatio) > 0.01f) {
                                 // Clear img2img data
                                 selectedImageUri = null
+                                selectedImageUriRef2 = null
                                 croppedBitmap = null
+                                croppedBitmapRef2 = null
                                 maskBitmap = null
                                 isInpaintMode = false
                                 cropRect = null
                                 savedPathHistory = null
                                 base64EncodeDone = false
+                                base64EncodeDoneRef2 = false
+                                File(context.filesDir, "tmp.txt").delete()
+                                File(context.filesDir, "tmp_ref2.txt").delete()
+                                File(context.filesDir, "mask.txt").delete()
                             }
 
                             currentWidth = resolution.width
@@ -942,6 +1017,8 @@ fun ModelRunScreen(
                                         putExtra("modelId", modelId)
                                         putExtra("width", resolution.width)
                                         putExtra("height", resolution.height)
+                                        putExtra("use_opencl", useOpenCL)
+                                        putExtra("runtime_backend", runtimeBackend.value)
                                     }
                                 context.startForegroundService(serviceIntent)
                                 isCheckingBackend = true
@@ -997,6 +1074,7 @@ fun ModelRunScreen(
                                 height = if (model?.runOnCpu == true) 256 else 512,
                                 denoiseStrength = 0.6f,
                                 useOpenCL = useOpenCL,
+                                runtimeBackend = runtimeBackend.value,
                                 batchCounts = 1,
                                 scheduler = "dpm"
                             )
@@ -1018,17 +1096,20 @@ fun ModelRunScreen(
         )
     }
 
-    LaunchedEffect(Unit) {
-        checkBackendHealth(
-            backendState = BackendService.backendState,
-            onHealthy = {
-                isCheckingBackend = false
-            },
-            onUnhealthy = {
-                isCheckingBackend = false
-                errorMessage = context.getString(R.string.backend_failed)
-            }
-        )
+    LaunchedEffect(hasInitialized, runtimeBackend) {
+        if (hasInitialized) {
+            checkBackendHealth(
+                backendState = BackendService.backendState,
+                runtimeBackend = runtimeBackend,
+                onHealthy = {
+                    isCheckingBackend = false
+                },
+                onUnhealthy = {
+                    isCheckingBackend = false
+                    errorMessage = context.getString(R.string.backend_failed)
+                }
+            )
+        }
     }
 
     LaunchedEffect(backendRestartTrigger) {
@@ -1036,6 +1117,7 @@ fun ModelRunScreen(
             delay(500)
             checkBackendHealth(
                 backendState = BackendService.backendState,
+                runtimeBackend = runtimeBackend,
                 onHealthy = {
                     isCheckingBackend = false
                 },
@@ -1088,7 +1170,7 @@ fun ModelRunScreen(
                                 if (useImg2img) {
                                     TextButton(
                                         onClick = {
-                                            onSelectImageClick()
+                                            onSelectImageClick(RefSlot.PRIMARY)
                                         }
                                     ) {
                                         Text(
@@ -1101,6 +1183,24 @@ fun ModelRunScreen(
                                             contentDescription = "select image",
                                             modifier = Modifier.size(20.dp)
                                         )
+                                    }
+                                    if (runtimeBackend == RuntimeBackend.ADRENO) {
+                                        TextButton(
+                                            onClick = {
+                                                onSelectImageClick(RefSlot.SECONDARY)
+                                            }
+                                        ) {
+                                            Text(
+                                                "ref2",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.padding(end = 4.dp)
+                                            )
+                                            Icon(
+                                                Icons.Default.Image,
+                                                contentDescription = "select second image",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
                                     }
                                 }
                                 TextButton(
@@ -1134,7 +1234,7 @@ fun ModelRunScreen(
                                                 .verticalScroll(rememberScrollState())
                                                 .padding(vertical = 4.dp)
                                         ) {
-                                            if (model?.runOnCpu == false && availableResolutions.isNotEmpty()) {
+                                            if ((model?.runOnCpu == false || runtimeBackend == RuntimeBackend.ADRENO) && availableResolutions.isNotEmpty()) {
                                                 Column(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     // verticalArrangement = Arrangement.spacedBy(
@@ -1251,11 +1351,13 @@ fun ModelRunScreen(
                                                         ),
                                                         style = MaterialTheme.typography.bodyMedium
                                                     )
+                                                    val maxSize = if (runtimeBackend == RuntimeBackend.ADRENO) 1024f else 512f
+                                                    val sizeSteps = (((maxSize.toInt() - 128) / 64) - 1).coerceAtLeast(0)
                                                     Slider(
                                                         value = currentWidth.toFloat(),
                                                         onValueChange = onSizeChange,
-                                                        valueRange = 128f..512f,
-                                                        steps = 5,
+                                                        valueRange = 128f..maxSize,
+                                                        steps = sizeSteps,
                                                         modifier = Modifier.fillMaxWidth()
                                                     )
                                                 }
@@ -1273,10 +1375,9 @@ fun ModelRunScreen(
                                                         style = MaterialTheme.typography.bodyMedium
                                                     )
                                                     FilterChip(
-                                                        selected = !useOpenCL,
+                                                        selected = runtimeBackend == RuntimeBackend.CPU,
                                                         onClick = {
-                                                            useOpenCL = false
-                                                            saveAllFields()
+                                                            applyRuntimeBackend(RuntimeBackend.CPU)
                                                         },
                                                         label = { Text("CPU") },
                                                         modifier = Modifier.weight(
@@ -1284,20 +1385,27 @@ fun ModelRunScreen(
                                                         )
                                                     )
                                                     FilterChip(
-                                                        selected = useOpenCL,
+                                                        selected = runtimeBackend == RuntimeBackend.OPENCL,
                                                         onClick = {
-                                                            if (!useOpenCL) {
+                                                            if (runtimeBackend != RuntimeBackend.OPENCL) {
                                                                 showOpenCLWarningDialog =
                                                                     true
                                                             } else {
-                                                                useOpenCL = false
-                                                                saveAllFields()
+                                                                applyRuntimeBackend(RuntimeBackend.CPU)
                                                             }
                                                         },
                                                         label = { Text("GPU") },
                                                         modifier = Modifier.weight(
                                                             1f
                                                         )
+                                                    )
+                                                    FilterChip(
+                                                        selected = runtimeBackend == RuntimeBackend.ADRENO,
+                                                        onClick = {
+                                                            applyRuntimeBackend(RuntimeBackend.ADRENO)
+                                                        },
+                                                        label = { Text("Adreno") },
+                                                        modifier = Modifier.weight(1f)
                                                     )
                                                 }
                                             }
@@ -1517,6 +1625,7 @@ fun ModelRunScreen(
                                     runOnCpu = model?.runOnCpu ?: false,
                                     denoiseStrength = denoiseStrength,
                                     useOpenCL = useOpenCL,
+                                    runtimeBackend = runtimeBackend.value,
                                     scheduler = scheduler
                                 )
 
@@ -1551,6 +1660,7 @@ fun ModelRunScreen(
                                             runOnCpu = model?.runOnCpu ?: false,
                                             denoiseStrength = denoiseStrength,
                                             useOpenCL = useOpenCL,
+                                            runtimeBackend = runtimeBackend.value,
                                             scheduler = scheduler
                                         )
 
@@ -1574,10 +1684,26 @@ fun ModelRunScreen(
                                                 denoiseStrength
                                             )
                                             putExtra("use_opencl", useOpenCL)
+                                            putExtra("runtime_backend", runtimeBackend.value)
                                             putExtra("scheduler", scheduler)
                                             putExtra("batch_index", i)
-                                            if (selectedImageUri != null && base64EncodeDone) {
+                                            val hasPrimaryRef = if (runtimeBackend == RuntimeBackend.ADRENO) {
+                                                (selectedImageUri != null && base64EncodeDone) ||
+                                                    File(context.filesDir, "tmp.txt").exists()
+                                            } else {
+                                                selectedImageUri != null && base64EncodeDone
+                                            }
+                                            val hasSecondaryRef = if (runtimeBackend == RuntimeBackend.ADRENO) {
+                                                (selectedImageUriRef2 != null && base64EncodeDoneRef2) ||
+                                                    File(context.filesDir, "tmp_ref2.txt").exists()
+                                            } else {
+                                                selectedImageUriRef2 != null && base64EncodeDoneRef2
+                                            }
+                                            if (hasPrimaryRef) {
                                                 putExtra("has_image", true)
+                                                if (hasSecondaryRef) {
+                                                    putExtra("has_extra_image", true)
+                                                }
                                                 if (isInpaintMode && maskBitmap != null) {
                                                     putExtra("has_mask", true)
                                                 }
@@ -1744,7 +1870,8 @@ fun ModelRunScreen(
             }
 
             AnimatedVisibility(
-                visible = selectedImageUri != null && base64EncodeDone,
+                visible = (selectedImageUri != null && base64EncodeDone) ||
+                    (selectedImageUriRef2 != null && base64EncodeDoneRef2),
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
@@ -1791,10 +1918,13 @@ fun ModelRunScreen(
                                     onClick = {
                                         selectedImageUri = null
                                         croppedBitmap = null
+                                        base64EncodeDone = false
                                         maskBitmap = null
                                         isInpaintMode = false
                                         cropRect = null
                                         savedPathHistory = null
+                                        File(context.filesDir, "tmp.txt").delete()
+                                        File(context.filesDir, "mask.txt").delete()
                                     },
                                     modifier = Modifier
                                         .size(24.dp)
@@ -1894,6 +2024,65 @@ fun ModelRunScreen(
                                             Icon(
                                                 Icons.Default.Clear,
                                                 contentDescription = "Clear Mask",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = selectedImageUriRef2 != null && base64EncodeDoneRef2,
+                            enter = fadeIn() + expandHorizontally(),
+                            exit = fadeOut() + shrinkHorizontally()
+                        ) {
+                            Row {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Card(
+                                    modifier = Modifier.size(100.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                ) {
+                                    Box {
+                                        croppedBitmapRef2?.let { bitmap ->
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(LocalContext.current)
+                                                    .data(bitmap)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = "Second Reference Image",
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        } ?: selectedImageUriRef2?.let { uri ->
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(LocalContext.current)
+                                                    .data(uri)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = "Second Selected Image",
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                selectedImageUriRef2 = null
+                                                croppedBitmapRef2 = null
+                                                base64EncodeDoneRef2 = false
+                                                File(context.filesDir, "tmp_ref2.txt").delete()
+                                            },
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .background(
+                                                    color = MaterialTheme.colorScheme.surface.copy(
+                                                        alpha = 0.7f
+                                                    ),
+                                                    shape = CircleShape
+                                                )
+                                                .align(Alignment.TopEnd)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Clear,
+                                                contentDescription = "Remove Second Image",
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
@@ -2195,9 +2384,10 @@ fun ModelRunScreen(
                                                 params.height,
                                                 params.generationTime
                                                     ?: "unknown",
-                                                if (params.runOnCpu) {
-                                                    if (params.useOpenCL) "GPU" else "CPU"
-                                                } else "NPU"
+                                                runtimeLabel(
+                                                    params.runOnCpu,
+                                                    RuntimeBackend.fromValue(params.runtimeBackend)
+                                                )
                                             ),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
@@ -2313,9 +2503,10 @@ fun ModelRunScreen(
                                 Text(
                                     stringResource(
                                         R.string.basic_runtime,
-                                        if (generationParams?.runOnCpu == true) {
-                                            if (generationParams?.useOpenCL == true) "GPU" else "CPU"
-                                        } else "NPU"
+                                        runtimeLabel(
+                                            generationParams?.runOnCpu == true,
+                                            RuntimeBackend.fromValue(generationParams?.runtimeBackend)
+                                        )
                                     ),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
@@ -2777,7 +2968,11 @@ fun ModelRunScreen(
                 onCancel = {
                     showCropScreen = false
                     imageUriForCrop = null
-                    selectedImageUri = null
+                    if (imageRefSlotForCrop == RefSlot.PRIMARY) {
+                        selectedImageUri = null
+                    } else {
+                        selectedImageUriRef2 = null
+                    }
                 }
             )
         }
@@ -3073,6 +3268,7 @@ fun ModelRunScreen(
                                                     updatedParams.denoiseStrength
                                                 )
                                                 put("useOpenCL", updatedParams.useOpenCL)
+                                                put("runtimeBackend", updatedParams.runtimeBackend)
                                                 put("timestamp", timestamp)
                                             }
                                             jsonFile.writeText(jsonObject.toString())
@@ -3427,9 +3623,10 @@ fun ModelRunScreen(
                             Text(
                                 stringResource(
                                     R.string.basic_runtime,
-                                    if (params.runOnCpu) {
-                                        if (params.useOpenCL) "GPU" else "CPU"
-                                    } else "NPU"
+                                    runtimeLabel(
+                                        params.runOnCpu,
+                                        RuntimeBackend.fromValue(params.runtimeBackend)
+                                    )
                                 ),
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -3520,6 +3717,7 @@ fun ModelRunScreen(
                         steps = params.steps.toFloat()
                         seed = params.seed?.toString() ?: ""
                         scheduler = params.scheduler
+                        applyRuntimeBackend(RuntimeBackend.fromValue(params.runtimeBackend))
                         saveAllFields()
 
                         // Close dialogs and switch to prompt page
@@ -3544,6 +3742,7 @@ fun ModelRunScreen(
                         steps = params.steps.toFloat()
                         seed = ""  // Don't copy seed
                         scheduler = params.scheduler
+                        applyRuntimeBackend(RuntimeBackend.fromValue(params.runtimeBackend))
                         saveAllFields()
 
                         // Close dialogs and switch to prompt page

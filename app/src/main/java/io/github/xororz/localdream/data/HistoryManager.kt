@@ -52,6 +52,7 @@ class HistoryManager(private val context: Context) {
                 put("runOnCpu", params.runOnCpu)
                 put("denoiseStrength", params.denoiseStrength)
                 put("useOpenCL", params.useOpenCL)
+                put("runtimeBackend", params.runtimeBackend)
                 put("scheduler", params.scheduler)
                 put("timestamp", timestamp)
             }
@@ -139,6 +140,10 @@ class HistoryManager(private val context: Context) {
                     runOnCpu = json.getBoolean("runOnCpu"),
                     denoiseStrength = json.optDouble("denoiseStrength", 0.6).toFloat(),
                     useOpenCL = json.optBoolean("useOpenCL", false),
+                    runtimeBackend = json.optString(
+                        "runtimeBackend",
+                        RuntimeBackend.fromLegacy(json.optBoolean("useOpenCL", false)).value
+                    ),
                     scheduler = json.optString("scheduler", "dpm")
                 )
             } catch (e: Exception) {

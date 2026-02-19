@@ -7,8 +7,10 @@ import android.os.IBinder
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import io.github.xororz.localdream.data.RuntimeBackend
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +26,7 @@ import java.util.concurrent.TimeUnit
 import io.github.xororz.localdream.R
 import java.io.File
 import androidx.core.graphics.createBitmap
+import kotlin.math.pow
 
 class BackgroundGenerationService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -108,6 +111,9 @@ class BackgroundGenerationService : Service() {
         val height = intent.getIntExtra("height", 512)
         val denoiseStrength = intent.getFloatExtra("denoise_strength", 0.6f)
         val useOpenCL = intent.getBooleanExtra("use_opencl", false)
+        val runtimeBackend = RuntimeBackend.fromValue(
+            intent.getStringExtra("runtime_backend")
+        )
         val scheduler = intent.getStringExtra("scheduler") ?: "dpm"
 
         val image = if (intent.getBooleanExtra("has_image", false)) {
@@ -120,6 +126,21 @@ class BackgroundGenerationService : Service() {
                 }
             } catch (e: Exception) {
                 Log.e("GenerationService", "Failed to read image data", e)
+                null
+            }
+        } else {
+            null
+        }
+        val extraImage = if (intent.getBooleanExtra("has_extra_image", false)) {
+            try {
+                val tmpFile = File(applicationContext.filesDir, "tmp_ref2.txt")
+                if (tmpFile.exists()) {
+                    tmpFile.readText()
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e("GenerationService", "Failed to read extra image data", e)
                 null
             }
         } else {
@@ -163,9 +184,11 @@ class BackgroundGenerationService : Service() {
                 width,
                 height,
                 image,
+                extraImage,
                 mask,
                 denoiseStrength,
                 useOpenCL,
+                runtimeBackend,
                 scheduler
             )
         }
@@ -182,13 +205,33 @@ class BackgroundGenerationService : Service() {
         width: Int,
         height: Int,
         image: String?,
+        extraImage: String?,
         mask: String?,
         denoiseStrength: Float,
         useOpenCL: Boolean,
+        runtimeBackend: RuntimeBackend,
         scheduler: String
     ) = withContext(Dispatchers.IO) {
         try {
             updateState(GenerationState.Progress(0f))
+
+            if (runtimeBackend == RuntimeBackend.ADRENO) {
+                runGenerationWithSdApi(
+                    prompt = prompt,
+                    negativePrompt = negativePrompt,
+                    steps = steps,
+                    cfg = cfg,
+                    seed = seed,
+                    width = width,
+                    height = height,
+                    image = image,
+                    extraImage = extraImage,
+                    mask = mask,
+                    denoiseStrength = denoiseStrength,
+                    scheduler = scheduler
+                )
+                return@withContext
+            }
 
             val preferences =
                 applicationContext.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -420,6 +463,156 @@ class BackgroundGenerationService : Service() {
                 )
             )
             stopSelf()
+        }
+    }
+
+    private fun estimateAdrenoSdApiDurationMs(
+        steps: Int,
+        width: Int,
+        height: Int,
+        hasInitImage: Boolean
+    ): Long {
+        val areaScale = (width.toDouble() * height.toDouble()) / (512.0 * 512.0)
+        val samplePerStepSec = 8.6 * areaScale.pow(0.92)
+        val sampleSec = samplePerStepSec * steps.coerceAtLeast(1)
+        val vaeSec = if (areaScale <= 1.05) 3.3 else 3.3 * areaScale.pow(0.75)
+        val ioAndPostSec = 1.0
+        val editPenalty = if (hasInitImage) 1.25 else 1.0
+        val estimateSec = (sampleSec + vaeSec + ioAndPostSec) * editPenalty
+        return (estimateSec * 1000.0).toLong().coerceAtLeast(12_000L)
+    }
+
+    private suspend fun runGenerationWithSdApi(
+        prompt: String,
+        negativePrompt: String,
+        steps: Int,
+        cfg: Float,
+        seed: Long?,
+        width: Int,
+        height: Int,
+        image: String?,
+        extraImage: String?,
+        mask: String?,
+        denoiseStrength: Float,
+        scheduler: String
+    ) = withContext(Dispatchers.IO) {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(3600, TimeUnit.SECONDS)
+            .readTimeout(3600, TimeUnit.SECONDS)
+            .writeTimeout(3600, TimeUnit.SECONDS)
+            .callTimeout(3600, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
+
+        val samplerName = when (scheduler) {
+            "euler_a" -> "euler_a"
+            // Flux2 Adreno path is tuned/validated with Euler in our perf gates.
+            "dpm" -> "euler"
+            else -> "dpm++ 2m"
+        }
+        // For cfg_scale ~= 1, disabling CFG avoids the uncond branch and matches our
+        // precomputed-cond Adreno perf/stability gate.
+        val useCfg = cfg > 1.0001f
+        val effectiveNegativePrompt = if (useCfg) negativePrompt else ""
+
+        val payload = JSONObject().apply {
+            put("prompt", prompt)
+            put("negative_prompt", effectiveNegativePrompt)
+            put("steps", steps)
+            put("cfg_scale", cfg)
+            put("cfg", cfg)
+            put("use_cfg", useCfg)
+            put("sampler_name", samplerName)
+            put("scheduler", "discrete")
+            put("width", width)
+            put("height", height)
+            put("batch_size", 1)
+            seed?.let { put("seed", it) }
+        }
+
+        val endpoint = if (image != null) "/sdapi/v1/img2img" else "/sdapi/v1/txt2img"
+        if (image != null) {
+            payload.put("init_images", org.json.JSONArray().put(image))
+            if (!extraImage.isNullOrBlank()) {
+                payload.put("extra_images", org.json.JSONArray().put(extraImage))
+            }
+            payload.put("denoising_strength", denoiseStrength)
+            if (mask != null) {
+                payload.put("mask", mask)
+            }
+        }
+
+        Log.d("GenerationService", "sdapi endpoint=$endpoint payload=${payload}")
+
+        val estimatedTotalMs =
+            estimateAdrenoSdApiDurationMs(steps, width, height, hasInitImage = image != null)
+        Log.d(
+            "GenerationService",
+            "Adreno progress estimate: ${estimatedTotalMs}ms (steps=$steps, ${width}x${height}, img2img=${image != null})"
+        )
+
+        val progressJob = serviceScope.launch {
+            val startMs = System.currentTimeMillis()
+            while (isActive) {
+                val elapsedMs = (System.currentTimeMillis() - startMs).coerceAtLeast(0L)
+                val linear = (elapsedMs.toFloat() / estimatedTotalMs.toFloat()).coerceIn(0f, 1f)
+                val p = (0.01f + linear * 0.94f).coerceAtMost(0.95f)
+                updateState(GenerationState.Progress(p))
+                updateNotification(p)
+                delay(300)
+            }
+        }
+
+        try {
+            val request = Request.Builder()
+                .url("http://localhost:8081$endpoint")
+                .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
+                .build()
+
+            val responseText = client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException(
+                        this@BackgroundGenerationService.getString(
+                            R.string.error_request_failed,
+                            response.code.toString()
+                        )
+                    )
+                }
+                response.body?.string() ?: throw IOException("empty response body")
+            }
+
+            val json = JSONObject(responseText)
+            val images = json.optJSONArray("images")
+            if (images == null || images.length() == 0) {
+                throw IOException("sdapi: images is empty")
+            }
+
+            var b64 = images.getString(0)
+            val commaPos = b64.indexOf(',')
+            if (commaPos >= 0) {
+                b64 = b64.substring(commaPos + 1)
+            }
+
+            val imageBytes = Base64.getDecoder().decode(b64)
+            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                ?: throw IOException("failed to decode generated image")
+
+            updateState(GenerationState.Complete(bitmap, seed))
+            updateNotification(1.0f)
+
+            // Keep behavior consistent with legacy backend: wait UI to consume bitmap.
+            val waitStartTime = System.currentTimeMillis()
+            val timeoutMs = 5000L
+            while (!_bitmapConsumed.value && isActive) {
+                if (System.currentTimeMillis() - waitStartTime > timeoutMs) {
+                    Log.w("BgGenService", "Timeout waiting for bitmap consumption (sdapi)")
+                    break
+                }
+                delay(100)
+            }
+            stopSelf()
+        } finally {
+            progressJob.cancel()
         }
     }
 

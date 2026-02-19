@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.Model
+import io.github.xororz.localdream.data.RuntimeBackend
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
@@ -14,6 +15,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import io.github.xororz.localdream.data.ModelRepository
 import io.github.xororz.localdream.BuildConfig
+import org.json.JSONObject
 
 class BackendService : Service() {
     private var process: Process? = null
@@ -78,12 +80,14 @@ class BackendService : Service() {
         val modelId = intent?.getStringExtra("modelId")
         val width = intent?.getIntExtra("width", 512) ?: 512
         val height = intent?.getIntExtra("height", 512) ?: 512
+        val runtimeBackend =
+            RuntimeBackend.fromValue(intent?.getStringExtra("runtime_backend"))
         if (modelId != null) {
             val modelRepository = ModelRepository(this)
             val model = modelRepository.models.find { it.id == modelId }
 
             if (model != null) {
-                if (startBackend(model, width, height)) {
+                if (startBackend(model, width, height, runtimeBackend)) {
                     updateState(BackendState.Running)
                 } else {
                     updateState(BackendState.Error("Backend start failed"))
@@ -209,8 +213,43 @@ class BackendService : Service() {
         }
     }
 
-    private fun startBackend(model: Model, width: Int, height: Int): Boolean {
-        Log.i(TAG, "backend start, model: ${model.name}, resolution: ${width}×${height}")
+    private fun parseAdrenoConfig(modelsDir: File): JSONObject? {
+        val configFile = File(modelsDir, "sdcpp_backend.json")
+        if (!configFile.exists()) {
+            return null
+        }
+        return try {
+            JSONObject(configFile.readText())
+        } catch (e: Exception) {
+            Log.e(TAG, "Invalid sdcpp_backend.json: ${e.message}")
+            null
+        }
+    }
+
+    private fun resolveModelPath(modelsDir: File, path: String?): File? {
+        if (path.isNullOrBlank()) return null
+        val f = File(path)
+        return if (f.isAbsolute) f else File(modelsDir, path)
+    }
+
+    private fun firstExisting(modelsDir: File, names: List<String>): File? {
+        for (name in names) {
+            val f = File(modelsDir, name)
+            if (f.exists()) return f
+        }
+        return null
+    }
+
+    private fun startBackend(
+        model: Model,
+        width: Int,
+        height: Int,
+        runtimeBackend: RuntimeBackend
+    ): Boolean {
+        Log.i(
+            TAG,
+            "backend start, model: ${model.name}, resolution: ${width}×${height}, runtime: ${runtimeBackend.value}"
+        )
         updateState(BackendState.Starting)
 
         try {
@@ -218,92 +257,20 @@ class BackendService : Service() {
             val modelsDir = File(Model.getModelsDir(this), model.id)
 
             val executableFile = File(nativeDir, EXECUTABLE_NAME)
-
-            if (!executableFile.exists()) {
+            val usingAdrenoBackend = model.runOnCpu && runtimeBackend == RuntimeBackend.ADRENO
+            if (!usingAdrenoBackend && !executableFile.exists()) {
                 Log.e(TAG, "error: executable does not exist: ${executableFile.absolutePath}")
                 return false
             }
 
             val preferences = this.getSharedPreferences("app_prefs", MODE_PRIVATE)
             val useImg2img = preferences.getBoolean("use_img2img", true)
-
-            var clipfilename = "clip.bin"
-            if (model.useCpuClip) {
-                clipfilename = "clip.mnn"
-            }
-            var command = listOf(
-                executableFile.absolutePath,
-                "--clip", File(modelsDir, clipfilename).absolutePath,
-                "--unet", File(modelsDir, "unet.bin").absolutePath,
-                "--vae_decoder", File(modelsDir, "vae_decoder.bin").absolutePath,
-                "--tokenizer", File(modelsDir, "tokenizer.json").absolutePath,
-                "--backend", File(runtimeDir, "libQnnHtp.so").absolutePath,
-                "--system_library", File(runtimeDir, "libQnnSystem.so").absolutePath,
-                "--port", "8081",
-                "--text_embedding_size", model.textEmbeddingSize.toString()
-            )
-            if (width != 512 || height != 512) {
-                val patchFile = if (width == height) {
-                    val squarePatch = File(modelsDir, "${width}.patch")
-                    if (squarePatch.exists()) {
-                        squarePatch
-                    } else {
-                        File(modelsDir, "${width}x${height}.patch")
-                    }
-                } else {
-                    File(modelsDir, "${width}x${height}.patch")
-                }
-
-                if (patchFile.exists()) {
-                    command = command + listOf(
-                        "--patch", patchFile.absolutePath,
-                    )
-                    Log.i(TAG, "Using patch file: ${patchFile.name}")
-                } else {
-                    Log.w(
-                        TAG,
-                        "Patch file not found: ${patchFile.absolutePath}, falling back to 512×512"
-                    )
-                }
-            }
-            if (useImg2img) {
-                command = command + listOf(
-                    "--vae_encoder", File(modelsDir, "vae_encoder.bin").absolutePath,
-                )
-            }
-            if (model.id.startsWith("pony")) {
-                command += "--ponyv55"
-            }
-            if (model.useCpuClip) {
-                command += "--use_cpu_clip"
-            }
-            if (model.runOnCpu) {
-                command = listOf(
-                    executableFile.absolutePath,
-                    "--clip", File(modelsDir, "clip.mnn").absolutePath,
-                    "--unet", File(modelsDir, "unet.mnn").absolutePath,
-                    "--vae_decoder", File(modelsDir, "vae_decoder.mnn").absolutePath,
-                    "--tokenizer", File(modelsDir, "tokenizer.json").absolutePath,
-                    "--port", "8081",
-                    "--text_embedding_size", if (model.id != "sd21") "768" else "1024",
-                    "--cpu"
-                )
-                if (useImg2img) {
-                    command = command + listOf(
-                        "--vae_encoder", File(modelsDir, "vae_encoder.mnn").absolutePath,
-                    )
-                }
-            }
-            if (BuildConfig.FLAVOR == "filter") {
-                command = command + listOf(
-                    "--safety_checker",
-                    File(filesDir, "safety_checker.mnn").absolutePath
-                )
-            }
             val env = mutableMapOf<String, String>()
 
             val systemLibPaths = mutableListOf(
+                nativeDir,
                 runtimeDir.absolutePath,
+                File(filesDir, "runtime_libs").absolutePath,
                 "/system/lib64",
                 "/vendor/lib64",
                 "/vendor/lib64/egl",
@@ -335,13 +302,246 @@ class BackendService : Service() {
             env["LD_LIBRARY_PATH"] = systemLibPathsStr
             env["DSP_LIBRARY_PATH"] = runtimeDir.absolutePath
 
+            var command: List<String>
+            var runDir = File(nativeDir)
+
+            if (usingAdrenoBackend) {
+                val config = parseAdrenoConfig(modelsDir)
+                val useExternalServer = config?.optBoolean("external_server", false) ?: false
+                if (useExternalServer) {
+                    Log.i(TAG, "Adreno backend uses external sd-server; skip local process launch")
+                    return true
+                }
+                val executable = resolveModelPath(modelsDir, config?.optString("executable"))
+                    ?: run {
+                        val bundled = File(nativeDir, "libsd_server.so")
+                        if (bundled.exists()) bundled else File(runtimeDir, "sd-server")
+                    }
+                if (!executable.exists()) {
+                    Log.e(
+                        TAG,
+                        "Adreno backend missing executable. Put sd-server in ${runtimeDir.absolutePath} or provide sdcpp_backend.json executable."
+                    )
+                    return false
+                }
+
+                val diffusionModel = resolveModelPath(modelsDir, config?.optString("diffusion_model"))
+                    ?: firstExisting(
+                        modelsDir,
+                        listOf("diffusion_model.gguf", "flux-2-klein-4b-Q4_0.gguf", "model.gguf")
+                    )
+                val llmModel = resolveModelPath(modelsDir, config?.optString("llm"))
+                    ?: firstExisting(modelsDir, listOf("llm.gguf", "qwen_3_4b-Q4_0.gguf"))
+                val condCrossAttn = resolveModelPath(modelsDir, config?.optString("cond_crossattn"))
+                val uncondCrossAttn =
+                    resolveModelPath(modelsDir, config?.optString("uncond_crossattn"))
+                val vaeModel = resolveModelPath(modelsDir, config?.optString("vae"))
+                    ?: firstExisting(
+                        modelsDir,
+                        listOf("vae.safetensors", "flux2-vae.safetensors", "ae.safetensors", "ae-f16.safetensors")
+                    )
+
+                if (diffusionModel == null || vaeModel == null || (llmModel == null && condCrossAttn == null)) {
+                    Log.e(
+                        TAG,
+                        "Adreno backend model files missing. Need diffusion + vae + (llm or cond_crossattn)."
+                    )
+                    return false
+                }
+
+                // Keep defaults aligned with our validated Flux2 Adreno perf gate (Step27).
+                val adrenoThreads = config?.optInt("threads", 1) ?: 1
+                val enableFlashAttn = config?.optBoolean("flash_attn", false) ?: false
+                val enableDiffConvDirect = config?.optBoolean("diffusion_conv_direct", false) ?: false
+                val enableVaeConvDirect = config?.optBoolean("vae_conv_direct", true) ?: true
+                val enableVerbose = config?.optBoolean("verbose", false) ?: false
+
+                val qcomMlVaeDir = resolveModelPath(modelsDir, config?.optString("qcom_ml_vae_dir"))
+                    ?: listOf(
+                        File(modelsDir, "qcom_ml_flux2_vae"),
+                        File(modelsDir, "qcom_ml_vae")
+                    ).firstOrNull { it.exists() && it.isDirectory }
+                val qcomMlVaeLib =
+                    resolveModelPath(modelsDir, config?.optString("qcom_ml_vae_lib"))
+                        ?: listOf(
+                            File(filesDir, "runtime_libs/libsd_qcom_ml_vae.so"),
+                            File("/data/local/tmp/sd_bench/libsd_qcom_ml_vae.so"),
+                            File(nativeDir, "libsd_qcom_ml_vae.so")
+                        ).firstOrNull { it.exists() && it.isFile }
+                val vaeBackend = config?.optString("vae_backend")?.takeIf { it.isNotBlank() }
+                    ?: if (qcomMlVaeDir != null) "qcom_ml" else "ggml"
+
+                val adrenoCmd = mutableListOf(
+                    executable.absolutePath,
+                    "--listen-ip", "127.0.0.1",
+                    "--listen-port", "8081",
+                    "--diffusion-model", diffusionModel.absolutePath,
+                    "--vae", vaeModel.absolutePath,
+                    "--threads", adrenoThreads.toString(),
+                    "--vae-backend", vaeBackend
+                )
+                if (llmModel != null) {
+                    adrenoCmd += listOf("--llm", llmModel.absolutePath)
+                }
+                if (condCrossAttn != null) {
+                    adrenoCmd += listOf("--cond-crossattn", condCrossAttn.absolutePath)
+                }
+                if (uncondCrossAttn != null) {
+                    adrenoCmd += listOf("--uncond-crossattn", uncondCrossAttn.absolutePath)
+                }
+                if (enableFlashAttn) adrenoCmd += "--fa"
+                if (enableDiffConvDirect) adrenoCmd += "--diffusion-conv-direct"
+                if (enableVaeConvDirect) adrenoCmd += "--vae-conv-direct"
+                if (enableVerbose) adrenoCmd += "--verbose"
+
+                if (config != null && config.has("extra_args")) {
+                    val extraArgs = config.optJSONArray("extra_args")
+                    if (extraArgs != null) {
+                        for (i in 0 until extraArgs.length()) {
+                            val arg = extraArgs.optString(i)
+                            if (!arg.isNullOrBlank()) adrenoCmd += arg
+                        }
+                    }
+                }
+
+                val putEnvFromConfig =
+                    { jsonKey: String, envKey: String, defaultValue: String? ->
+                        val value = when {
+                            config == null -> defaultValue
+                            config.has(jsonKey) -> config.optString(jsonKey, defaultValue ?: "")
+                            else -> defaultValue
+                        }
+                        if (!value.isNullOrBlank()) {
+                            env[envKey] = value
+                        }
+                    }
+
+                env["GGML_OPENCL_USE_ADRENO_KERNELS"] = "1"
+                env["GGML_OPENCL_SOA_Q"] = "1"
+                putEnvFromConfig("mldrift", "GGML_OPENCL_MLDRIFT", "1")
+                putEnvFromConfig("mldrift_io_first", "GGML_OPENCL_MLDRIFT_IO_FIRST", "1")
+                putEnvFromConfig("mldrift_chunk_kv", "GGML_OPENCL_MLDRIFT_CHUNK_KV", "64")
+                putEnvFromConfig("qcom_ml_disable_mnn_attn", "SD_QCOM_ML_VAE_DISABLE_MNN_ATTN", "1")
+                putEnvFromConfig("qcom_ml_fallback_attn_16384", "SD_QCOM_ML_VAE_FALLBACK_ATTN_16384", "1")
+                putEnvFromConfig("qcom_ml_host_attn", "SD_QCOM_ML_VAE_HOST_ATTN", null)
+                putEnvFromConfig("qcom_ml_host_attn_backend", "SD_QCOM_ML_VAE_HOST_ATTN_BACKEND", null)
+                putEnvFromConfig("qcom_ml_host_attn_backend_profile", "SD_QCOM_ML_VAE_HOST_ATTN_BACKEND_PROFILE", null)
+                putEnvFromConfig("qcom_ml_replay_lib_dir", "SD_QCOM_ML_VAE_REPLAY_LIB_DIR", null)
+                putEnvFromConfig("qcom_ml_replay_q_scale_mul", "SD_QCOM_ML_VAE_REPLAY_Q_SCALE_MUL", null)
+                // Keep legacy aliases for binaries that still use MLDRIFT_* names.
+                putEnvFromConfig("qcom_ml_replay_lib_dir", "SD_QCOM_ML_VAE_MLDRIFT_LIB_DIR", null)
+                putEnvFromConfig("qcom_ml_replay_q_scale_mul", "SD_QCOM_ML_VAE_MLDRIFT_Q_SCALE_MUL", null)
+                putEnvFromConfig("qcom_ml_try_tiled", "SD_QCOM_ML_VAE_TRY_TILED", null)
+                putEnvFromConfig("qcom_ml_tile_size", "SD_QCOM_ML_VAE_TILE_SIZE", null)
+                putEnvFromConfig("qcom_ml_tile_overlap", "SD_QCOM_ML_VAE_TILE_OVERLAP", null)
+                putEnvFromConfig("qcom_ml_optimize_mem", "SD_QCOM_ML_VAE_OPTIMIZE_MEM", null)
+                putEnvFromConfig("qcom_ml_prepare", "SD_QCOM_ML_VAE_PREPARE", null)
+                if (config != null && config.has("extra_env")) {
+                    val extraEnv = config.optJSONObject("extra_env")
+                    if (extraEnv != null) {
+                        val keys = extraEnv.keys()
+                        while (keys.hasNext()) {
+                            val k = keys.next()
+                            val v = extraEnv.optString(k, "")
+                            if (k.isNotBlank() && v.isNotBlank()) {
+                                env[k] = v
+                            }
+                        }
+                    }
+                }
+                if (qcomMlVaeDir != null) {
+                    env["SD_QCOM_ML_VAE_DIR"] = qcomMlVaeDir.absolutePath
+                }
+                if (qcomMlVaeLib != null) {
+                    env["SD_QCOM_ML_VAE_LIB"] = qcomMlVaeLib.absolutePath
+                }
+
+                command = adrenoCmd
+                runDir = executable.parentFile ?: runtimeDir
+            } else {
+                var clipfilename = "clip.bin"
+                if (model.useCpuClip) {
+                    clipfilename = "clip.mnn"
+                }
+                var defaultCommand = listOf(
+                    executableFile.absolutePath,
+                    "--clip", File(modelsDir, clipfilename).absolutePath,
+                    "--unet", File(modelsDir, "unet.bin").absolutePath,
+                    "--vae_decoder", File(modelsDir, "vae_decoder.bin").absolutePath,
+                    "--tokenizer", File(modelsDir, "tokenizer.json").absolutePath,
+                    "--backend", File(runtimeDir, "libQnnHtp.so").absolutePath,
+                    "--system_library", File(runtimeDir, "libQnnSystem.so").absolutePath,
+                    "--port", "8081",
+                    "--text_embedding_size", model.textEmbeddingSize.toString()
+                )
+                if (width != 512 || height != 512) {
+                    val patchFile = if (width == height) {
+                        val squarePatch = File(modelsDir, "${width}.patch")
+                        if (squarePatch.exists()) {
+                            squarePatch
+                        } else {
+                            File(modelsDir, "${width}x${height}.patch")
+                        }
+                    } else {
+                        File(modelsDir, "${width}x${height}.patch")
+                    }
+
+                    if (patchFile.exists()) {
+                        defaultCommand = defaultCommand + listOf(
+                            "--patch", patchFile.absolutePath,
+                        )
+                        Log.i(TAG, "Using patch file: ${patchFile.name}")
+                    } else {
+                        Log.w(
+                            TAG,
+                            "Patch file not found: ${patchFile.absolutePath}, falling back to 512×512"
+                        )
+                    }
+                }
+                if (useImg2img) {
+                    defaultCommand = defaultCommand + listOf(
+                        "--vae_encoder", File(modelsDir, "vae_encoder.bin").absolutePath,
+                    )
+                }
+                if (model.id.startsWith("pony")) {
+                    defaultCommand += "--ponyv55"
+                }
+                if (model.useCpuClip) {
+                    defaultCommand += "--use_cpu_clip"
+                }
+                if (model.runOnCpu) {
+                    defaultCommand = listOf(
+                        executableFile.absolutePath,
+                        "--clip", File(modelsDir, "clip.mnn").absolutePath,
+                        "--unet", File(modelsDir, "unet.mnn").absolutePath,
+                        "--vae_decoder", File(modelsDir, "vae_decoder.mnn").absolutePath,
+                        "--tokenizer", File(modelsDir, "tokenizer.json").absolutePath,
+                        "--port", "8081",
+                        "--text_embedding_size", if (model.id != "sd21") "768" else "1024",
+                        "--cpu"
+                    )
+                    if (useImg2img) {
+                        defaultCommand = defaultCommand + listOf(
+                            "--vae_encoder", File(modelsDir, "vae_encoder.mnn").absolutePath,
+                        )
+                    }
+                }
+                if (BuildConfig.FLAVOR == "filter") {
+                    defaultCommand = defaultCommand + listOf(
+                        "--safety_checker",
+                        File(filesDir, "safety_checker.mnn").absolutePath
+                    )
+                }
+                command = defaultCommand
+            }
+
             Log.d(TAG, "COMMAND: ${command.joinToString(" ")}")
-            Log.d(TAG, "DIR: ${runtimeDir}")
+            Log.d(TAG, "DIR: $runDir")
             Log.d(TAG, "LD_LIBRARY_PATH=${env["LD_LIBRARY_PATH"]}")
             Log.d(TAG, "DSP_LIBRARY_PATH=${env["DSP_LIBRARY_PATH"]}")
 
             val processBuilder = ProcessBuilder(command).apply {
-                directory(File(nativeDir))
+                directory(runDir)
                 redirectErrorStream(true)
                 environment().putAll(env)
             }
