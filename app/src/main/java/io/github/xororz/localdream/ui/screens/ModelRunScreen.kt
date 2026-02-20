@@ -768,14 +768,35 @@ fun ModelRunScreen(
             seed = prefs.seed
             denoiseStrength = prefs.denoiseStrength
             runtimeBackend = RuntimeBackend.fromValue(prefs.runtimeBackend)
+            val isAdrenoPresetModel =
+                modelId == "flux2_klein_adreno" || modelId == "z_image_turbo_adreno"
+            if (isAdrenoPresetModel &&
+                runtimeBackend == RuntimeBackend.CPU &&
+                prefs.width == -1 &&
+                prefs.height == -1
+            ) {
+                runtimeBackend = RuntimeBackend.ADRENO
+            }
             useOpenCL = runtimeBackend == RuntimeBackend.OPENCL
             batchCounts = prefs.batchCounts
             scheduler = prefs.scheduler
 
             currentWidth =
-                if (prefs.width == -1) (if (model?.runOnCpu == true) 256 else 512) else prefs.width
+                if (prefs.width == -1) {
+                    if (runtimeBackend == RuntimeBackend.ADRENO) 512
+                    else if (model?.runOnCpu == true) 256
+                    else 512
+                } else {
+                    prefs.width
+                }
             currentHeight =
-                if (prefs.height == -1) (if (model?.runOnCpu == true) 256 else 512) else prefs.height
+                if (prefs.height == -1) {
+                    if (runtimeBackend == RuntimeBackend.ADRENO) 512
+                    else if (model?.runOnCpu == true) 256
+                    else 512
+                } else {
+                    prefs.height
+                }
             if (runtimeBackend == RuntimeBackend.ADRENO &&
                 (modelId == "flux2_klein_adreno" || modelId == "z_image_turbo_adreno")
             ) {

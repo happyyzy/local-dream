@@ -528,22 +528,60 @@ class BackendService : Service() {
                 command = adrenoCmd
                 runDir = executable.parentFile ?: runtimeDir
             } else {
-                var clipfilename = "clip.bin"
-                if (model.useCpuClip) {
-                    clipfilename = "clip.mnn"
+                val hasSdxlHint = !model.runOnCpu && model.isCustom &&
+                    (
+                        File(modelsDir, "clip_2.mnn").exists() ||
+                            File(modelsDir, "tokenizer_2.json").exists() ||
+                            File(modelsDir, "unet_1024.bin").exists()
+                        )
+
+                var clipFile = if (model.useCpuClip) {
+                    File(modelsDir, "clip.mnn")
+                } else {
+                    File(modelsDir, "clip.bin")
                 }
+                var tokenizerFile = File(modelsDir, "tokenizer.json")
+                var unetFile = File(modelsDir, "unet.bin")
+                var vaeDecoderFile = File(modelsDir, "vae_decoder.bin")
+                var textEmbeddingSize = model.textEmbeddingSize
+
+                if (hasSdxlHint) {
+                    textEmbeddingSize = 1024
+                    val clip2 = File(modelsDir, "clip_2.mnn")
+                    if (clip2.exists()) {
+                        clipFile = clip2
+                    }
+                    val tokenizer2 = File(modelsDir, "tokenizer_2.json")
+                    if (tokenizer2.exists()) {
+                        tokenizerFile = tokenizer2
+                    }
+                }
+
+                val useDirect1024Binary = !model.runOnCpu &&
+                    width == 1024 &&
+                    height == 1024 &&
+                    File(modelsDir, "unet_1024.bin").exists()
+                if (useDirect1024Binary) {
+                    unetFile = File(modelsDir, "unet_1024.bin")
+                    val vaeDecoder1024 = File(modelsDir, "vae_decoder_1024.bin")
+                    if (vaeDecoder1024.exists()) {
+                        vaeDecoderFile = vaeDecoder1024
+                    }
+                    Log.i(TAG, "Using direct 1024 binaries for custom NPU model")
+                }
+
                 var defaultCommand = listOf(
                     executableFile.absolutePath,
-                    "--clip", File(modelsDir, clipfilename).absolutePath,
-                    "--unet", File(modelsDir, "unet.bin").absolutePath,
-                    "--vae_decoder", File(modelsDir, "vae_decoder.bin").absolutePath,
-                    "--tokenizer", File(modelsDir, "tokenizer.json").absolutePath,
+                    "--clip", clipFile.absolutePath,
+                    "--unet", unetFile.absolutePath,
+                    "--vae_decoder", vaeDecoderFile.absolutePath,
+                    "--tokenizer", tokenizerFile.absolutePath,
                     "--backend", File(runtimeDir, "libQnnHtp.so").absolutePath,
                     "--system_library", File(runtimeDir, "libQnnSystem.so").absolutePath,
                     "--port", "8081",
-                    "--text_embedding_size", model.textEmbeddingSize.toString()
+                    "--text_embedding_size", textEmbeddingSize.toString()
                 )
-                if (width != 512 || height != 512) {
+                if ((width != 512 || height != 512) && !useDirect1024Binary) {
                     val patchFile = if (width == height) {
                         val squarePatch = File(modelsDir, "${width}.patch")
                         if (squarePatch.exists()) {
@@ -566,11 +604,21 @@ class BackendService : Service() {
                             "Patch file not found: ${patchFile.absolutePath}, falling back to 512×512"
                         )
                     }
+                } else if (useDirect1024Binary) {
+                    Log.i(TAG, "Skip zstd patch for 1024 because direct binaries are provided")
                 }
                 if (useImg2img) {
-                    defaultCommand = defaultCommand + listOf(
-                        "--vae_encoder", File(modelsDir, "vae_encoder.bin").absolutePath,
-                    )
+                    val vaeEncoderBin = File(modelsDir, "vae_encoder.bin")
+                    if (vaeEncoderBin.exists()) {
+                        defaultCommand = defaultCommand + listOf(
+                            "--vae_encoder", vaeEncoderBin.absolutePath,
+                        )
+                    } else {
+                        Log.w(
+                            TAG,
+                            "img2img requested but vae_encoder.bin is missing; fall back to txt2img path"
+                        )
+                    }
                 }
                 if (model.id.startsWith("pony")) {
                     defaultCommand += "--ponyv55"
@@ -590,9 +638,17 @@ class BackendService : Service() {
                         "--cpu"
                     )
                     if (useImg2img) {
-                        defaultCommand = defaultCommand + listOf(
-                            "--vae_encoder", File(modelsDir, "vae_encoder.mnn").absolutePath,
-                        )
+                        val vaeEncoderMnn = File(modelsDir, "vae_encoder.mnn")
+                        if (vaeEncoderMnn.exists()) {
+                            defaultCommand = defaultCommand + listOf(
+                                "--vae_encoder", vaeEncoderMnn.absolutePath,
+                            )
+                        } else {
+                            Log.w(
+                                TAG,
+                                "img2img requested but vae_encoder.mnn is missing; fall back to txt2img path"
+                            )
+                        }
                     }
                 }
                 if (BuildConfig.FLAVOR == "filter") {

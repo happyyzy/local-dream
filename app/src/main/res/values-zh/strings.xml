@@ -10,6 +10,8 @@
     <string name="absolutereality_description">现实场景生成模型</string>
     <string name="sd21_description">通用图像生成模型</string>
     <string name="ponyv55_description">Pony Diffusion系列</string>
+    <string name="flux2_klein_adreno_description">Flux2 Klein Q4_0（Adreno优化）</string>
+    <string name="z_image_turbo_adreno_description">Z Image Turbo Q4_0（Adreno优化）</string>
 
     <!-- Models -->
     <string name="backend_notify">模型服务运行中</string>
@@ -39,7 +41,7 @@
     <string name="download_settings">下载设置</string>
     <string name="download">下载</string>
     <string name="download_from">下载地址</string>
-    <string name="download_settings_hint">设置模型下载地址\n默认为https://huggingface.co/\n国内用户可使用镜像https://hf-mirror.com/</string>
+    <string name="download_settings_hint">设置模型下载地址\n默认使用https://hf-mirror.com/\n也可切换为https://huggingface.co/或自定义</string>
     <string name="source_huggingface">Hugging Face</string>
     <string name="source_hf_mirror">hf-mirror</string>
     <string name="source_custom">自定义</string>

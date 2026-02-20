@@ -10,6 +10,8 @@
     <string name="absolutereality_description">Realistic Image Generation</string>
     <string name="sd21_description">General Image Generation</string>
     <string name="ponyv55_description">Pony Diffusion Series</string>
+    <string name="flux2_klein_adreno_description">Flux2 Klein Q4_0 (Adreno optimized)</string>
+    <string name="z_image_turbo_adreno_description">Z Image Turbo Q4_0 (Adreno optimized)</string>
 
     <!-- Models -->
     <string name="backend_notify">Model Backend Service Running</string>
@@ -39,7 +41,7 @@
     <string name="download_settings">Download Settings</string>
     <string name="download">Download</string>
     <string name="download_from">Download From</string>
-    <string name="download_settings_hint">Download from huggingface or other mirror url</string>
+    <string name="download_settings_hint">Default source is https://hf-mirror.com/ (you can switch to Hugging Face or custom URL)</string>
     <string name="source_huggingface">Hugging Face</string>
     <string name="source_hf_mirror">hf-mirror</string>
     <string name="source_custom">Custom</string>

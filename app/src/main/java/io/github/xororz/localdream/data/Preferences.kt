@@ -44,7 +44,7 @@ class GenerationPreferences(private val context: Context) {
     suspend fun getBaseUrl(): String {
         return context.dataStore.data
             .map { preferences ->
-                preferences[BASE_URL_KEY] ?: "https://huggingface.co/"
+                preferences[BASE_URL_KEY] ?: "https://hf-mirror.com/"
             }.first()
     }
 
@@ -57,7 +57,7 @@ class GenerationPreferences(private val context: Context) {
     suspend fun getSelectedSource(): String {
         return context.dataStore.data
             .map { preferences ->
-                preferences[SELECTED_SOURCE_KEY] ?: "huggingface"
+                preferences[SELECTED_SOURCE_KEY] ?: "hf-mirror"
             }.first()
     }
 

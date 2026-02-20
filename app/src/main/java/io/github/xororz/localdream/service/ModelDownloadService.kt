@@ -19,8 +19,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.net.URI
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 
@@ -51,6 +53,7 @@ class ModelDownloadService : Service() {
         const val EXTRA_MODEL_ID = "model_id"
         const val EXTRA_MODEL_NAME = "model_name"
         const val EXTRA_FILE_URL = "file_url"
+        const val EXTRA_MANIFEST_URL = "manifest_url"
         const val EXTRA_IS_ZIP = "is_zip"
         const val EXTRA_IS_NPU = "is_npu"
         const val EXTRA_MODEL_TYPE = "model_type" // "sd" or "upscaler"
@@ -80,13 +83,19 @@ class ModelDownloadService : Service() {
             ACTION_START_DOWNLOAD -> {
                 val modelId = intent.getStringExtra(EXTRA_MODEL_ID) ?: return START_NOT_STICKY
                 val modelName = intent.getStringExtra(EXTRA_MODEL_NAME) ?: modelId
-                val fileUrl = intent.getStringExtra(EXTRA_FILE_URL) ?: return START_NOT_STICKY
+                val fileUrl = intent.getStringExtra(EXTRA_FILE_URL) ?: ""
+                val manifestUrl = intent.getStringExtra(EXTRA_MANIFEST_URL) ?: ""
+                Log.i(
+                    TAG,
+                    "start download request: modelId=$modelId fileUrl=$fileUrl manifestUrl=$manifestUrl"
+                )
+                if (fileUrl.isEmpty() && manifestUrl.isEmpty()) return START_NOT_STICKY
                 val isZip = intent.getBooleanExtra(EXTRA_IS_ZIP, false)
                 val isNpu = intent.getBooleanExtra(EXTRA_IS_NPU, false)
                 val modelType = intent.getStringExtra(EXTRA_MODEL_TYPE) ?: "sd"
 
                 startForeground(NOTIFICATION_ID, createNotification(modelName, 0f))
-                startDownload(modelId, modelName, fileUrl, isZip, isNpu, modelType)
+                startDownload(modelId, modelName, fileUrl, manifestUrl, isZip, isNpu, modelType)
             }
 
             ACTION_CANCEL_DOWNLOAD -> {
@@ -100,6 +109,7 @@ class ModelDownloadService : Service() {
         modelId: String,
         modelName: String,
         fileUrl: String,
+        manifestUrl: String,
         isZip: Boolean,
         isNpu: Boolean,
         modelType: String
@@ -118,20 +128,28 @@ class ModelDownloadService : Service() {
                 }
                 tempDir.mkdirs()
 
-                tempFile = File(tempDir, "${modelId}_${System.currentTimeMillis()}.tmp")
-
-                downloadFile(fileUrl, tempFile, modelId, modelName)
+                if (manifestUrl.isBlank() && fileUrl.isNotEmpty()) {
+                    tempFile = File(tempDir, "${modelId}_${System.currentTimeMillis()}.tmp")
+                    downloadFile(fileUrl, tempFile, modelId, modelName)
+                }
 
                 when (modelType) {
                     "sd" -> {
-                        if (isZip) {
-                            val modelDir = File(getModelsDir(), modelId)
+                        val modelDir = File(getModelsDir(), modelId)
+                        if (modelDir.exists()) {
+                            modelDir.deleteRecursively()
+                        }
+                        modelDir.mkdirs()
 
-                            if (modelDir.exists()) {
-                                modelDir.deleteRecursively()
-                            }
-                            modelDir.mkdirs()
-
+                        if (manifestUrl.isNotBlank()) {
+                            downloadManifestModel(
+                                manifestUrl = manifestUrl,
+                                modelDir = modelDir,
+                                tempDir = tempDir,
+                                modelId = modelId,
+                                modelName = modelName
+                            )
+                        } else if (isZip && tempFile != null) {
                             extractTempDir = File(tempDir, "${modelId}_extract")
                             extractTempDir.mkdirs()
 
@@ -145,11 +163,19 @@ class ModelDownloadService : Service() {
                             }
                             extractTempDir.delete()
                             extractTempDir = null
-
-                            if (isNpu) {
-                                File(modelDir, "v3").createNewFile()
+                        } else if (tempFile != null) {
+                            val targetName = fileUrl.substringAfterLast('/').ifBlank { "model.bin" }
+                            val targetFile = File(modelDir, targetName)
+                            if (targetFile.exists()) {
+                                targetFile.delete()
                             }
+                            tempFile.renameTo(targetFile)
                         }
+
+                        if (isNpu) {
+                            File(modelDir, "v3").createNewFile()
+                        }
+                        File(modelDir, "finished").createNewFile()
                     }
 
                     "upscaler" -> {
@@ -162,11 +188,14 @@ class ModelDownloadService : Service() {
                             targetFile.delete()
                         }
 
-                        tempFile.renameTo(targetFile)
+                        val moved = tempFile?.renameTo(targetFile) ?: false
+                        if (!moved) {
+                            throw Exception("Failed to store upscaler model file")
+                        }
                     }
                 }
 
-                tempFile.delete()
+                tempFile?.delete()
                 tempFile = null
 
                 _downloadState.value = DownloadState.Success(modelId)
@@ -198,12 +227,121 @@ class ModelDownloadService : Service() {
         }
     }
 
+    private data class ManifestItem(
+        val url: String,
+        val targetPath: String,
+        val isZip: Boolean
+    )
+
+    private suspend fun downloadManifestModel(
+        manifestUrl: String,
+        modelDir: File,
+        tempDir: File,
+        modelId: String,
+        modelName: String
+    ) = withContext(Dispatchers.IO) {
+        Log.i(TAG, "download manifest: $manifestUrl")
+        val request = Request.Builder().url(manifestUrl).build()
+        val manifestItems = client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw Exception("Manifest download failed with code: ${response.code}")
+            }
+            val body = response.body?.string()
+                ?: throw Exception("Manifest response body is null")
+            parseManifestItems(manifestUrl, body)
+        }
+
+        if (manifestItems.isEmpty()) {
+            throw Exception("Manifest has no files")
+        }
+        Log.i(TAG, "manifest files: ${manifestItems.size}")
+
+        manifestItems.forEachIndexed { index, item ->
+            Log.i(
+                TAG,
+                "manifest item ${index + 1}/${manifestItems.size}: url=${item.url} target=${item.targetPath}"
+            )
+            val tempFile = File(tempDir, "${modelId}_${index}.tmp")
+            val displayName = "$modelName (${index + 1}/${manifestItems.size})"
+            downloadFile(item.url, tempFile, modelId, displayName)
+
+            val targetFile = resolveTargetFile(modelDir, item.targetPath)
+            targetFile.parentFile?.mkdirs()
+            if (item.isZip) {
+                _downloadState.value = DownloadState.Extracting(modelId)
+                updateNotification(modelName, 0f, isExtracting = true)
+                unzipFile(tempFile, targetFile.parentFile ?: modelDir)
+                tempFile.delete()
+            } else {
+                if (targetFile.exists()) {
+                    targetFile.delete()
+                }
+                tempFile.renameTo(targetFile)
+            }
+        }
+    }
+
+    private fun parseManifestItems(manifestUrl: String, jsonText: String): List<ManifestItem> {
+        val root = JSONObject(jsonText)
+        val files = root.optJSONArray("files") ?: return emptyList()
+        val result = mutableListOf<ManifestItem>()
+
+        for (i in 0 until files.length()) {
+            val file = files.optJSONObject(i) ?: continue
+            val rawPath = file.optString("path", "")
+            val url = file.optString("url", "").ifBlank {
+                if (rawPath.isNotBlank()) {
+                    resolveRelativeUrl(manifestUrl, rawPath)
+                } else {
+                    ""
+                }
+            }
+            val target = file.optString("target", rawPath)
+            if (url.isBlank() || target.isBlank()) {
+                continue
+            }
+            result += ManifestItem(
+                url = url,
+                targetPath = target,
+                isZip = file.optBoolean("is_zip", false)
+            )
+        }
+        return result
+    }
+
+    private fun resolveRelativeUrl(base: String, path: String): String {
+        if (path.startsWith("http://") || path.startsWith("https://")) {
+            return path
+        }
+        return URI(base).resolve(path).toString()
+    }
+
+    private fun resolveTargetFile(modelDir: File, targetPath: String): File {
+        val safeTarget = targetPath
+            .replace('\\', '/')
+            .trimStart('/')
+            .split('/')
+            .filter { it.isNotBlank() }
+            .joinToString("/")
+        if (safeTarget.isEmpty()) {
+            throw Exception("Invalid target path in manifest")
+        }
+
+        val base = modelDir.canonicalFile
+        val out = File(modelDir, safeTarget).canonicalFile
+        if (out.path != base.path && !out.path.startsWith(base.path + File.separator)) {
+            throw Exception("Invalid target path outside model dir: $targetPath")
+        }
+        return out
+    }
+
     private suspend fun downloadFile(
         url: String,
         destFile: File,
         modelId: String,
         modelName: String
     ) = withContext(Dispatchers.IO) {
+        Log.i(TAG, "download file: $url")
         val request = Request.Builder()
             .url(url)
             .build()

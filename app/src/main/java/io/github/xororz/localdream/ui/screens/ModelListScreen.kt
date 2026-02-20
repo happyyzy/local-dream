@@ -146,9 +146,9 @@ fun ModelListScreen(
     var isConverting by remember { mutableStateOf(false) }
     var conversionProgress by remember { mutableStateOf("") }
     var tempBaseUrl by remember { mutableStateOf("") }
-    var selectedSource by remember { mutableStateOf("huggingface") }
+    var selectedSource by remember { mutableStateOf("hf-mirror") }
     val generationPreferences = remember { GenerationPreferences(context) }
-    var currentBaseUrl by remember { mutableStateOf("https://huggingface.co/") }
+    var currentBaseUrl by remember { mutableStateOf("https://hf-mirror.com/") }
 
     var version by remember { mutableStateOf(0) }
     val modelRepository = remember(version) { ModelRepository(context) }

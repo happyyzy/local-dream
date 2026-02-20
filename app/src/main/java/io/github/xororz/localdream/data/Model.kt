@@ -15,6 +15,8 @@ import java.io.File
 import android.content.Intent
 import android.util.Log
 
+private const val DEFAULT_MODEL_BASE_URL = "https://hf-mirror.com/"
+
 data class Resolution(
     val width: Int,
     val height: Int
@@ -55,6 +57,11 @@ object PatchScanner {
                     resolutions.add(Resolution(width, height))
                 }
             }
+        }
+
+        // Some custom NPU SDXL packs ship dedicated 1024 binaries instead of zstd patches.
+        if (File(modelDir, "unet_1024.bin").exists()) {
+            resolutions.add(Resolution(1024, 1024))
         }
 
         return resolutions.sortedBy { it.width * it.height }.distinct()
@@ -104,6 +111,7 @@ data class Model(
     val description: String,
     val baseUrl: String,
     val fileUri: String = "",
+    val manifestUri: String = "",
     val generationSize: Int = 512,
     val textEmbeddingSize: Int = 768,
     val approximateSize: String = "1GB",
@@ -118,13 +126,36 @@ data class Model(
 ) {
 
     fun startDownload(context: Context) {
-        if (isCustom || fileUri.isEmpty()) return
+        if (isCustom || (fileUri.isEmpty() && manifestUri.isEmpty())) return
+
+        val normalizedBaseUrl = baseUrl.removeSuffix("/")
+        val resolvedFileUrl = when {
+            fileUri.isEmpty() -> ""
+            fileUri.startsWith("http://") || fileUri.startsWith("https://") -> fileUri
+            else -> "${normalizedBaseUrl}/${fileUri}"
+        }
+        val resolvedManifestUrl = when {
+            manifestUri.isEmpty() -> ""
+            manifestUri.startsWith("http://") || manifestUri.startsWith("https://") -> manifestUri
+            else -> "${normalizedBaseUrl}/${manifestUri}"
+        }
 
         val intent = Intent(context, ModelDownloadService::class.java).apply {
             action = ModelDownloadService.ACTION_START_DOWNLOAD
             putExtra(ModelDownloadService.EXTRA_MODEL_ID, id)
             putExtra(ModelDownloadService.EXTRA_MODEL_NAME, name)
-            putExtra(ModelDownloadService.EXTRA_FILE_URL, "${baseUrl.removeSuffix("/")}/$fileUri")
+            if (resolvedFileUrl.isNotEmpty()) {
+                putExtra(
+                    ModelDownloadService.EXTRA_FILE_URL,
+                    resolvedFileUrl
+                )
+            }
+            if (resolvedManifestUrl.isNotEmpty()) {
+                putExtra(
+                    ModelDownloadService.EXTRA_MANIFEST_URL,
+                    resolvedManifestUrl
+                )
+            }
             putExtra(ModelDownloadService.EXTRA_IS_ZIP, fileUri.endsWith(".zip"))
             putExtra(ModelDownloadService.EXTRA_IS_NPU, !runOnCpu)
             putExtra(ModelDownloadService.EXTRA_MODEL_TYPE, "sd")
@@ -201,6 +232,10 @@ data class Model(
                 return false
             }
 
+            if (modelId == "flux2_klein_adreno" || modelId == "z_image_turbo_adreno") {
+                return File(modelDir, "finished").exists()
+            }
+
             val files = modelDir.listFiles()
             return files != null && files.isNotEmpty()
         }
@@ -247,7 +282,7 @@ data class UpscalerModel(
 class UpscalerRepository(private val context: Context) {
     private val generationPreferences = GenerationPreferences(context)
 
-    private var _baseUrl = mutableStateOf("https://huggingface.co/")
+    private var _baseUrl = mutableStateOf(DEFAULT_MODEL_BASE_URL)
     var baseUrl: String
         get() = _baseUrl.value
         private set(value) {
@@ -322,7 +357,7 @@ class UpscalerRepository(private val context: Context) {
 class ModelRepository(private val context: Context) {
     private val generationPreferences = GenerationPreferences(context)
 
-    private var _baseUrl = mutableStateOf("https://huggingface.co/")
+    private var _baseUrl = mutableStateOf(DEFAULT_MODEL_BASE_URL)
     var baseUrl: String
         get() = _baseUrl.value
         private set(value) {
@@ -365,12 +400,19 @@ class ModelRepository(private val context: Context) {
 
     private fun createCustomModel(modelDir: File, isNpu: Boolean = false): Model {
         val modelId = modelDir.name
+        val hasSdxlHint = File(modelDir, "clip_2.mnn").exists() ||
+            File(modelDir, "tokenizer_2.json").exists() ||
+            File(modelDir, "unet_1024.bin").exists()
+        val textEmbeddingSize = if (hasSdxlHint) 1024 else 768
+        val generationSize = if (File(modelDir, "unet_1024.bin").exists()) 1024 else 512
 
         return Model(
             id = modelId,
             name = modelId,
             description = context.getString(R.string.custom_model),
             baseUrl = "",
+            generationSize = generationSize,
+            textEmbeddingSize = textEmbeddingSize,
             approximateSize = "Custom",
             isDownloaded = true,
             defaultPrompt = "masterpiece, best quality, a cat sat on a mat,",
@@ -382,9 +424,9 @@ class ModelRepository(private val context: Context) {
     }
 
     private fun initializeModels(): List<Model> {
-        val customModels = scanCustomModels()
-
         val predefinedModels = mutableListOf(
+            createFlux2KleinAdrenoModel(),
+            createZImageTurboAdrenoModel(),
             createAnythingV5Model(),
             createAnythingV5ModelCPU(),
             createQteaMixModel(),
@@ -397,7 +439,54 @@ class ModelRepository(private val context: Context) {
             createChilloutMixModel(),
         )
 
+        val predefinedIds = predefinedModels.map { it.id }.toSet()
+        val customModels = scanCustomModels().filterNot { it.id in predefinedIds }
+
         return customModels + predefinedModels
+    }
+
+    private fun createFlux2KleinAdrenoModel(): Model {
+        val id = "flux2_klein_adreno"
+        val manifestUri = "zhiyuanasad/flux2_klein_adreno/resolve/main/download_manifest.json"
+        val isDownloaded = Model.isModelDownloaded(context, id, false)
+
+        return Model(
+            id = id,
+            name = "Flux2 Klein Adreno",
+            description = context.getString(R.string.flux2_klein_adreno_description),
+            baseUrl = baseUrl,
+            manifestUri = manifestUri,
+            generationSize = 1024,
+            textEmbeddingSize = 1024,
+            approximateSize = "4.8GB",
+            isDownloaded = isDownloaded,
+            defaultPrompt = "a cinematic portrait of a lovely cat wearing sunglasses",
+            defaultNegativePrompt = "worst quality, low quality, blurry, distorted face, extra limbs",
+            runOnCpu = true,
+            useCpuClip = true
+        )
+    }
+
+    private fun createZImageTurboAdrenoModel(): Model {
+        val id = "z_image_turbo_adreno"
+        val manifestUri = "zhiyuanasad/z_image_turbo_adreno/resolve/main/download_manifest.json"
+        val isDownloaded = Model.isModelDownloaded(context, id, false)
+
+        return Model(
+            id = id,
+            name = "Z Image Turbo Adreno",
+            description = context.getString(R.string.z_image_turbo_adreno_description),
+            baseUrl = baseUrl,
+            manifestUri = manifestUri,
+            generationSize = 1024,
+            textEmbeddingSize = 1024,
+            approximateSize = "5.8GB",
+            isDownloaded = isDownloaded,
+            defaultPrompt = "a detailed photo portrait, soft studio lighting, high detail skin and eyes",
+            defaultNegativePrompt = "worst quality, low quality, overexposed, blurry, artifacts",
+            runOnCpu = true,
+            useCpuClip = true
+        )
     }
 
     private fun createAnythingV5Model(): Model {
