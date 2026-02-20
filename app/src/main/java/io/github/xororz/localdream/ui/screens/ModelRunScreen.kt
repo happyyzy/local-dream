@@ -463,9 +463,25 @@ fun ModelRunScreen(
             ) {
                 newSize = if (newSize >= 768) 1024 else 512
             }
-            currentWidth = newSize
-            currentHeight = newSize
-            saveAllFields()
+            if (newSize != currentWidth || newSize != currentHeight) {
+                currentWidth = newSize
+                currentHeight = newSize
+                saveAllFields()
+                // Adreno route profiles are selected at backend start; restart to apply size-specific profile.
+                if (hasInitialized && runtimeBackend == RuntimeBackend.ADRENO) {
+                    val serviceIntent = Intent(context, BackendService::class.java).apply {
+                        action = BackendService.ACTION_RESTART
+                        putExtra("modelId", modelId)
+                        putExtra("width", currentWidth)
+                        putExtra("height", currentHeight)
+                        putExtra("use_opencl", useOpenCL)
+                        putExtra("runtime_backend", runtimeBackend.value)
+                    }
+                    context.startForegroundService(serviceIntent)
+                    isCheckingBackend = true
+                    backendRestartTrigger++
+                }
+            }
         }
     }
     val onDenoiseStrengthChange =

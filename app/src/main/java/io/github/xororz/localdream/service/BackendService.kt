@@ -226,6 +226,49 @@ class BackendService : Service() {
         }
     }
 
+    private fun mergeJsonObject(dst: JSONObject, src: JSONObject) {
+        val keys = src.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val srcValue = src.opt(key)
+            if (srcValue is JSONObject) {
+                val dstObj = dst.optJSONObject(key)
+                if (dstObj != null) {
+                    mergeJsonObject(dstObj, srcValue)
+                    dst.put(key, dstObj)
+                } else {
+                    dst.put(key, JSONObject(srcValue.toString()))
+                }
+            } else {
+                dst.put(key, srcValue)
+            }
+        }
+    }
+
+    private fun applyAdrenoProfile(
+        config: JSONObject?,
+        width: Int,
+        height: Int
+    ): JSONObject? {
+        if (config == null) return null
+        val profiles = config.optJSONObject("profiles") ?: return config
+
+        val maxSide = maxOf(width, height)
+        val exactKey = "${width}x${height}"
+        val sideKey = maxSide.toString()
+        val bucketKey = if (maxSide >= 768) "1024" else "512"
+        val profile = profiles.optJSONObject(exactKey)
+            ?: profiles.optJSONObject(sideKey)
+            ?: profiles.optJSONObject(bucketKey)
+            ?: return config
+
+        val merged = JSONObject(config.toString())
+        merged.remove("profiles")
+        mergeJsonObject(merged, profile)
+        Log.i(TAG, "Adreno profile override applied: key=$bucketKey (request=${width}x${height})")
+        return merged
+    }
+
     private fun resolveModelPath(modelsDir: File, path: String?): File? {
         if (path.isNullOrBlank()) return null
         val f = File(path)
@@ -306,7 +349,7 @@ class BackendService : Service() {
             var runDir = File(nativeDir)
 
             if (usingAdrenoBackend) {
-                val config = parseAdrenoConfig(modelsDir)
+                val config = applyAdrenoProfile(parseAdrenoConfig(modelsDir), width, height)
                 val useExternalServer = config?.optBoolean("external_server", false) ?: false
                 if (useExternalServer) {
                     Log.i(TAG, "Adreno backend uses external sd-server; skip local process launch")
