@@ -450,6 +450,21 @@ fun ModelRunScreen(
         }
     }
 
+    fun restartAdrenoBackendForCurrentParams() {
+        if (!hasInitialized || runtimeBackend != RuntimeBackend.ADRENO) return
+        val serviceIntent = Intent(context, BackendService::class.java).apply {
+            action = BackendService.ACTION_RESTART
+            putExtra("modelId", modelId)
+            putExtra("width", currentWidth)
+            putExtra("height", currentHeight)
+            putExtra("use_opencl", useOpenCL)
+            putExtra("runtime_backend", runtimeBackend.value)
+        }
+        context.startForegroundService(serviceIntent)
+        isCheckingBackend = true
+        backendRestartTrigger++
+    }
+
     val onStepsChange = remember { { value: Float -> steps = value; saveAllFields() } }
     val onCfgChange = remember { { value: Float -> cfg = value; saveAllFields() } }
     val onSizeChange = remember {
@@ -468,19 +483,7 @@ fun ModelRunScreen(
                 currentHeight = newSize
                 saveAllFields()
                 // Adreno route profiles are selected at backend start; restart to apply size-specific profile.
-                if (hasInitialized && runtimeBackend == RuntimeBackend.ADRENO) {
-                    val serviceIntent = Intent(context, BackendService::class.java).apply {
-                        action = BackendService.ACTION_RESTART
-                        putExtra("modelId", modelId)
-                        putExtra("width", currentWidth)
-                        putExtra("height", currentHeight)
-                        putExtra("use_opencl", useOpenCL)
-                        putExtra("runtime_backend", runtimeBackend.value)
-                    }
-                    context.startForegroundService(serviceIntent)
-                    isCheckingBackend = true
-                    backendRestartTrigger++
-                }
+                restartAdrenoBackendForCurrentParams()
             }
         }
     }
@@ -527,6 +530,9 @@ fun ModelRunScreen(
                     val tmpFile = File(context.filesDir, "tmp_ref2.txt")
                     tmpFile.writeText(base64String)
                     base64EncodeDoneRef2 = true
+                }
+                withContext(Dispatchers.Main) {
+                    restartAdrenoBackendForCurrentParams()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -2017,6 +2023,7 @@ fun ModelRunScreen(
                                         savedPathHistory = null
                                         File(context.filesDir, "tmp.txt").delete()
                                         File(context.filesDir, "mask.txt").delete()
+                                        restartAdrenoBackendForCurrentParams()
                                     },
                                     modifier = Modifier
                                         .size(24.dp)
@@ -2161,6 +2168,7 @@ fun ModelRunScreen(
                                                 croppedBitmapRef2 = null
                                                 base64EncodeDoneRef2 = false
                                                 File(context.filesDir, "tmp_ref2.txt").delete()
+                                                restartAdrenoBackendForCurrentParams()
                                             },
                                             modifier = Modifier
                                                 .size(24.dp)

@@ -245,6 +245,13 @@ class BackendService : Service() {
         }
     }
 
+    private fun detectAdrenoProfileMode(): String {
+        val hasPrimaryRef = File(filesDir, "tmp.txt").exists()
+        val hasSecondaryRef = File(filesDir, "tmp_ref2.txt").exists()
+        if (!hasPrimaryRef) return "txt2img"
+        return if (hasSecondaryRef) "edit_ref2" else "edit_ref1"
+    }
+
     private fun applyAdrenoProfile(
         config: JSONObject?,
         width: Int,
@@ -253,19 +260,38 @@ class BackendService : Service() {
         if (config == null) return null
         val profiles = config.optJSONObject("profiles") ?: return config
 
+        val mode = detectAdrenoProfileMode()
         val maxSide = maxOf(width, height)
         val exactKey = "${width}x${height}"
         val sideKey = maxSide.toString()
         val bucketKey = if (maxSide >= 768) "1024" else "512"
-        val profile = profiles.optJSONObject(exactKey)
-            ?: profiles.optJSONObject(sideKey)
-            ?: profiles.optJSONObject(bucketKey)
-            ?: return config
+        val modeKeys = if (mode == "txt2img") emptyList() else listOf(
+            "${mode}_${exactKey}",
+            "${mode}_${sideKey}",
+            mode
+        )
+        val fallbackKeys = listOf(exactKey, sideKey, bucketKey)
+        val candidateKeys = modeKeys + fallbackKeys
+
+        var selectedKey: String? = null
+        var profile: JSONObject? = null
+        for (key in candidateKeys) {
+            val obj = profiles.optJSONObject(key)
+            if (obj != null) {
+                selectedKey = key
+                profile = obj
+                break
+            }
+        }
+        if (profile == null || selectedKey == null) return config
 
         val merged = JSONObject(config.toString())
         merged.remove("profiles")
         mergeJsonObject(merged, profile)
-        Log.i(TAG, "Adreno profile override applied: key=$bucketKey (request=${width}x${height})")
+        Log.i(
+            TAG,
+            "Adreno profile override applied: key=$selectedKey mode=$mode (request=${width}x${height})"
+        )
         return merged
     }
 
