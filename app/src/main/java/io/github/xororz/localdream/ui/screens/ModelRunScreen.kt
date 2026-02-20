@@ -964,6 +964,15 @@ fun ModelRunScreen(
             if (progress <= 0f) {
                 progress = 0.01f
             }
+        } else if (!serviceRunning && !isUpscaling) {
+            // Force-clear stale running/progress UI when service is already stopped.
+            isRunning = false
+            progress = 0f
+            generationStartTime = null
+            if (serviceState is GenerationState.Progress) {
+                // Drop stale static progress state that can keep the generate button disabled.
+                BackgroundGenerationService.resetState()
+            }
         }
     }
 
@@ -1833,11 +1842,11 @@ fun ModelRunScreen(
                                     )
                                 }
                             },
-                            enabled = serviceState !is GenerationState.Progress && !isRunning && !isUpscaling && !serviceRunning,
+                            enabled = !isRunning && !isUpscaling && !serviceRunning,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            if (serviceState is GenerationState.Progress || serviceRunning || isUpscaling) {
+                            if (isRunning || serviceRunning || isUpscaling) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp),
                                     color = MaterialTheme.colorScheme.onPrimary

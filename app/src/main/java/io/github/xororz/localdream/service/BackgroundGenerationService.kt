@@ -610,6 +610,10 @@ class BackgroundGenerationService : Service() {
 
             val imageBytes = Base64.getDecoder().decode(parsedResult.base64Image)
             val imageFile = persistSdApiImage(imageBytes)
+            // Stop synthetic progress updates before publishing Complete.
+            // Otherwise Progress can overwrite Complete and block UI consumption/history save.
+            progressJob.cancel()
+            progressJob.join()
             updateState(
                 GenerationState.Complete(
                     bitmap = null,
