@@ -7,8 +7,9 @@ import android.os.IBinder
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
+import android.util.JsonReader
+import android.util.JsonToken
 import androidx.core.app.NotificationCompat
 import io.github.xororz.localdream.data.RuntimeBackend
 import kotlinx.coroutines.*
@@ -18,6 +19,7 @@ import java.util.Base64
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.ResponseBody
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
@@ -26,7 +28,6 @@ import java.util.concurrent.TimeUnit
 import io.github.xororz.localdream.R
 import java.io.File
 import androidx.core.graphics.createBitmap
-import kotlin.math.pow
 
 class BackgroundGenerationService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -41,6 +42,7 @@ class BackgroundGenerationService : Service() {
         val generationState: StateFlow<GenerationState> = _generationState
 
         private val _bitmapConsumed = MutableStateFlow(false)
+        val bitmapConsumed: StateFlow<Boolean> = _bitmapConsumed
 
         private val _isServiceRunning = MutableStateFlow(false)
         val isServiceRunning: StateFlow<Boolean> = _isServiceRunning
@@ -66,7 +68,11 @@ class BackgroundGenerationService : Service() {
         data class Progress(val progress: Float, val intermediateImage: Bitmap? = null) :
             GenerationState()
 
-        data class Complete(val bitmap: Bitmap, val seed: Long?) : GenerationState()
+        data class Complete(
+            val bitmap: Bitmap? = null,
+            val seed: Long?,
+            val imagePath: String? = null
+        ) : GenerationState()
         data class Error(val message: String) : GenerationState()
     }
 
@@ -410,8 +416,8 @@ class BackgroundGenerationService : Service() {
 
                                     updateState(
                                         GenerationState.Complete(
-                                            bitmap,
-                                            returnedSeed
+                                            bitmap = bitmap,
+                                            seed = returnedSeed
                                         )
                                     )
 
@@ -422,7 +428,7 @@ class BackgroundGenerationService : Service() {
 
                                     // Wait for UI to consume the bitmap with timeout
                                     val waitStartTime = System.currentTimeMillis()
-                                    val timeoutMs = 5000L // 5 seconds timeout
+                                    val timeoutMs = 30000L // 30 seconds timeout
                                     while (!_bitmapConsumed.value && isActive) {
                                         if (System.currentTimeMillis() - waitStartTime > timeoutMs) {
                                             Log.w(
@@ -455,6 +461,18 @@ class BackgroundGenerationService : Service() {
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            if (_generationState.value is GenerationState.Complete) {
+                Log.d("GenerationService", "generation canceled after complete; keeping complete state")
+            } else {
+                Log.e("GenerationService", "generation canceled before completion", e)
+                updateState(
+                    GenerationState.Error(
+                        e.message ?: this@BackgroundGenerationService.getString(R.string.unknown_error)
+                    )
+                )
+            }
+            stopSelf()
         } catch (e: Exception) {
             Log.e("GenerationService", "generation error", e)
             updateState(
@@ -473,9 +491,17 @@ class BackgroundGenerationService : Service() {
         hasInitImage: Boolean
     ): Long {
         val areaScale = (width.toDouble() * height.toDouble()) / (512.0 * 512.0)
-        val samplePerStepSec = 8.6 * areaScale.pow(0.92)
+        val samplePerStepSec = when {
+            areaScale >= 3.8 -> 56.0
+            areaScale >= 1.8 -> 20.0
+            else -> 8.6
+        }
         val sampleSec = samplePerStepSec * steps.coerceAtLeast(1)
-        val vaeSec = if (areaScale <= 1.05) 3.3 else 3.3 * areaScale.pow(0.75)
+        val vaeSec = when {
+            areaScale >= 3.8 -> 24.0
+            areaScale >= 1.8 -> 10.0
+            else -> 3.3
+        }
         val ioAndPostSec = 1.0
         val editPenalty = if (hasInitImage) 1.25 else 1.0
         val estimateSec = (sampleSec + vaeSec + ioAndPostSec) * editPenalty
@@ -569,7 +595,7 @@ class BackgroundGenerationService : Service() {
                 .post(payload.toString().toRequestBody("application/json".toMediaTypeOrNull()))
                 .build()
 
-            val responseText = client.newCall(request).execute().use { response ->
+            val parsedResult = client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     throw IOException(
                         this@BackgroundGenerationService.getString(
@@ -578,31 +604,24 @@ class BackgroundGenerationService : Service() {
                         )
                     )
                 }
-                response.body?.string() ?: throw IOException("empty response body")
+                val body = response.body ?: throw IOException("empty response body")
+                parseSdApiResponse(body)
             }
 
-            val json = JSONObject(responseText)
-            val images = json.optJSONArray("images")
-            if (images == null || images.length() == 0) {
-                throw IOException("sdapi: images is empty")
-            }
-
-            var b64 = images.getString(0)
-            val commaPos = b64.indexOf(',')
-            if (commaPos >= 0) {
-                b64 = b64.substring(commaPos + 1)
-            }
-
-            val imageBytes = Base64.getDecoder().decode(b64)
-            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                ?: throw IOException("failed to decode generated image")
-
-            updateState(GenerationState.Complete(bitmap, seed))
+            val imageBytes = Base64.getDecoder().decode(parsedResult.base64Image)
+            val imageFile = persistSdApiImage(imageBytes)
+            updateState(
+                GenerationState.Complete(
+                    bitmap = null,
+                    seed = parsedResult.seed ?: seed,
+                    imagePath = imageFile.absolutePath
+                )
+            )
             updateNotification(1.0f)
 
             // Keep behavior consistent with legacy backend: wait UI to consume bitmap.
             val waitStartTime = System.currentTimeMillis()
-            val timeoutMs = 5000L
+            val timeoutMs = 30000L
             while (!_bitmapConsumed.value && isActive) {
                 if (System.currentTimeMillis() - waitStartTime > timeoutMs) {
                     Log.w("BgGenService", "Timeout waiting for bitmap consumption (sdapi)")
@@ -614,6 +633,74 @@ class BackgroundGenerationService : Service() {
         } finally {
             progressJob.cancel()
         }
+    }
+
+    private data class SdApiParsedResult(
+        val base64Image: String,
+        val seed: Long?
+    )
+
+    private fun parseSdApiResponse(body: ResponseBody): SdApiParsedResult {
+        var imageB64: String? = null
+        var seed: Long? = null
+
+        JsonReader(body.charStream()).use { reader ->
+            reader.isLenient = true
+            reader.beginObject()
+            while (reader.hasNext()) {
+                when (reader.nextName()) {
+                    "images" -> {
+                        reader.beginArray()
+                        if (reader.hasNext()) {
+                            imageB64 = reader.nextString()
+                        }
+                        while (reader.hasNext()) {
+                            reader.skipValue()
+                        }
+                        reader.endArray()
+                    }
+
+                    "info" -> {
+                        if (reader.peek() == JsonToken.NULL) {
+                            reader.nextNull()
+                        } else {
+                            val infoRaw = reader.nextString()
+                            if (infoRaw.startsWith("{")) {
+                                try {
+                                    val infoJson = JSONObject(infoRaw)
+                                    if (infoJson.has("seed")) {
+                                        seed = infoJson.optLong("seed")
+                                    }
+                                } catch (_: Exception) {
+                                }
+                            }
+                        }
+                    }
+
+                    else -> reader.skipValue()
+                }
+            }
+            reader.endObject()
+        }
+
+        var b64 = imageB64 ?: throw IOException("sdapi: images is empty")
+        val commaPos = b64.indexOf(',')
+        if (commaPos >= 0) {
+            b64 = b64.substring(commaPos + 1)
+        }
+        return SdApiParsedResult(base64Image = b64, seed = seed)
+    }
+
+    private fun persistSdApiImage(imageBytes: ByteArray): File {
+        if (imageBytes.isEmpty()) {
+            throw IOException("sdapi: decoded image is empty")
+        }
+        val tmpDir = File(filesDir, "tmp_results").apply { mkdirs() }
+        val outFile = File(tmpDir, "sdapi_${System.currentTimeMillis()}.png")
+        outFile.outputStream().use { out ->
+            out.write(imageBytes)
+        }
+        return outFile
     }
 
     private fun createNotificationChannel() {

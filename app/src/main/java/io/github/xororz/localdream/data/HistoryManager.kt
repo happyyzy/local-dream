@@ -40,23 +40,11 @@ class HistoryManager(private val context: Context) {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
 
-            val jsonFile = File(historyDir, "$timestamp.json")
-            val jsonObject = JSONObject().apply {
-                put("steps", params.steps)
-                put("cfg", params.cfg)
-                put("seed", params.seed)
-                put("prompt", params.prompt)
-                put("negativePrompt", params.negativePrompt)
-                put("generationTime", params.generationTime)
-                put("size", "${params.width}x${params.height}")
-                put("runOnCpu", params.runOnCpu)
-                put("denoiseStrength", params.denoiseStrength)
-                put("useOpenCL", params.useOpenCL)
-                put("runtimeBackend", params.runtimeBackend)
-                put("scheduler", params.scheduler)
-                put("timestamp", timestamp)
-            }
-            jsonFile.writeText(jsonObject.toString())
+            writeParamsJson(
+                historyDir = historyDir,
+                timestamp = timestamp,
+                params = params
+            )
 
             HistoryItem(
                 imageFile = imageFile,
@@ -67,6 +55,70 @@ class HistoryManager(private val context: Context) {
             Log.e("HistoryManager", "Failed to save image", e)
             null
         }
+    }
+
+    suspend fun saveGeneratedImageFromFile(
+        modelId: String,
+        sourcePath: String,
+        params: GenerationParameters
+    ): HistoryItem? = withContext(Dispatchers.IO) {
+        try {
+            val source = File(sourcePath)
+            if (!source.exists()) {
+                Log.e("HistoryManager", "Source image does not exist: $sourcePath")
+                return@withContext null
+            }
+
+            val timestamp = System.currentTimeMillis()
+            val historyDir = getHistoryDir(modelId)
+            val ext = source.extension.lowercase().let {
+                when (it) {
+                    "jpg", "jpeg" -> "jpg"
+                    else -> "png"
+                }
+            }
+            val imageFile = File(historyDir, "$timestamp.$ext")
+            source.copyTo(imageFile, overwrite = true)
+
+            writeParamsJson(
+                historyDir = historyDir,
+                timestamp = timestamp,
+                params = params
+            )
+
+            HistoryItem(
+                imageFile = imageFile,
+                params = params,
+                timestamp = timestamp
+            )
+        } catch (e: Exception) {
+            Log.e("HistoryManager", "Failed to save image from file", e)
+            null
+        }
+    }
+
+    private fun writeParamsJson(
+        historyDir: File,
+        timestamp: Long,
+        params: GenerationParameters
+    ) {
+        val jsonFile = File(historyDir, "$timestamp.json")
+        val jsonObject = JSONObject().apply {
+            put("steps", params.steps)
+            put("cfg", params.cfg)
+            put("seed", params.seed)
+            put("prompt", params.prompt)
+            put("negativePrompt", params.negativePrompt)
+            put("generationTime", params.generationTime)
+            put("size", "${params.width}x${params.height}")
+            put("runOnCpu", params.runOnCpu)
+            put("denoiseStrength", params.denoiseStrength)
+            put("useOpenCL", params.useOpenCL)
+            put("runtimeBackend", params.runtimeBackend)
+            put("scheduler", params.scheduler)
+            put("timestamp", timestamp)
+        }
+        jsonFile.writeText(jsonObject.toString())
     }
 
     suspend fun loadHistoryForModel(modelId: String): List<HistoryItem> =

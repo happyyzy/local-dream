@@ -284,6 +284,7 @@ fun ModelRunScreen(
     modifier: Modifier = Modifier
 ) {
     val serviceState by BackgroundGenerationService.generationState.collectAsState()
+    val serviceRunning by BackgroundGenerationService.isServiceRunning.collectAsState()
     val backendState by BackendService.backendState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -455,7 +456,13 @@ fun ModelRunScreen(
         { value: Float ->
             val rounded = (value / 64).roundToInt() * 64
             val maxSize = if (runtimeBackend == RuntimeBackend.ADRENO) 1024 else 512
-            val newSize = rounded.coerceIn(128, maxSize)
+            var newSize = rounded.coerceIn(128, maxSize)
+            // Keep Adreno custom models on validated size buckets to avoid stale 960x960-like states.
+            if (runtimeBackend == RuntimeBackend.ADRENO &&
+                (modelId == "flux2_klein_adreno" || modelId == "z_image_turbo_adreno")
+            ) {
+                newSize = if (newSize >= 768) 1024 else 512
+            }
             currentWidth = newSize
             currentHeight = newSize
             saveAllFields()
@@ -747,6 +754,13 @@ fun ModelRunScreen(
                 if (prefs.width == -1) (if (model?.runOnCpu == true) 256 else 512) else prefs.width
             currentHeight =
                 if (prefs.height == -1) (if (model?.runOnCpu == true) 256 else 512) else prefs.height
+            if (runtimeBackend == RuntimeBackend.ADRENO &&
+                (modelId == "flux2_klein_adreno" || modelId == "z_image_turbo_adreno")
+            ) {
+                val snapped = if (currentWidth >= 768 || currentHeight >= 768) 1024 else 512
+                currentWidth = snapped
+                currentHeight = snapped
+            }
 
             hasInitialized = true
         }
@@ -812,12 +826,19 @@ fun ModelRunScreen(
     LaunchedEffect(serviceState) {
         when (val state = serviceState) {
             is GenerationState.Progress -> {
-                if (progress == 0f) {
-                    generationStartTime = System.currentTimeMillis()
+                if (!serviceRunning) {
+                    // Guard against stale progress state when service already stopped.
+                    isRunning = false
+                    progress = 0f
+                    generationStartTime = null
+                } else {
+                    if (generationStartTime == null) {
+                        generationStartTime = System.currentTimeMillis()
+                    }
+                    progress = state.progress
+                    isRunning = true
+                    state.intermediateImage?.let { intermediateBitmap = it }
                 }
-                progress = state.progress
-                isRunning = true
-                state.intermediateImage?.let { intermediateBitmap = it }
             }
 
             is GenerationState.Complete -> {
@@ -827,6 +848,22 @@ fun ModelRunScreen(
 
                     state.seed?.let { returnedSeed = it }
                     progress = 0f
+
+                    val finalBitmap = when {
+                        state.bitmap != null -> state.bitmap
+                        !state.imagePath.isNullOrBlank() -> withContext(Dispatchers.IO) {
+                            BitmapFactory.decodeFile(state.imagePath)
+                        }
+                        else -> null
+                    }
+
+                    if (finalBitmap == null) {
+                        Log.e("ModelRunScreen", "Generation complete but image decode failed")
+                        errorMessage = context.getString(R.string.unknown_error)
+                        isRunning = false
+                        BackgroundGenerationService.markBitmapConsumed()
+                        return@withContext
+                    }
 
                     val genTime = generationStartTime?.let { startTime ->
                         val endTime = System.currentTimeMillis()
@@ -857,22 +894,27 @@ fun ModelRunScreen(
                         scheduler = generationParamsTmp.scheduler
                     )
 
-                    // Save to disk and update history list
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val savedItem = historyManager.saveGeneratedImage(
-                            modelId = modelId,
-                            bitmap = state.bitmap,
-                            params = newParams
-                        )
-                        // Add to history list for immediate UI update
-                        if (savedItem != null) {
-                            withContext(Dispatchers.Main) {
-                                historyItems.add(0, savedItem)
-                            }
+                    // Save synchronously before marking consumed so history file is guaranteed.
+                    val savedItem = withContext(Dispatchers.IO) {
+                        if (!state.imagePath.isNullOrBlank()) {
+                            historyManager.saveGeneratedImageFromFile(
+                                modelId = modelId,
+                                sourcePath = state.imagePath,
+                                params = newParams
+                            )
+                        } else {
+                            historyManager.saveGeneratedImage(
+                                modelId = modelId,
+                                bitmap = finalBitmap,
+                                params = newParams
+                            )
                         }
                     }
+                    if (savedItem != null) {
+                        historyItems.add(0, savedItem)
+                    }
 
-                    currentBitmap = state.bitmap
+                    currentBitmap = finalBitmap
                     generationParams = newParams
                     imageVersion += 1
 
@@ -907,8 +949,20 @@ fun ModelRunScreen(
             }
 
             else -> {
-                isRunning = false
-                progress = 0f
+                if (!serviceRunning && !isUpscaling) {
+                    isRunning = false
+                    progress = 0f
+                }
+            }
+        }
+    }
+
+    // Keep progress panel visible while backend service is still alive, even if state updates lag.
+    LaunchedEffect(serviceRunning) {
+        if (serviceRunning && serviceState !is GenerationState.Complete && serviceState !is GenerationState.Error) {
+            isRunning = true
+            if (progress <= 0f) {
+                progress = 0.01f
             }
         }
     }
@@ -1633,6 +1687,11 @@ fun ModelRunScreen(
                                     "ModelRunScreen",
                                     "start generation batch: $batchCounts times"
                                 )
+                                errorMessage = null
+                                isRunning = true
+                                if (progress <= 0f) {
+                                    progress = 0.01f
+                                }
 
                                 // If seed is set, only generate once regardless of batch count
                                 val actualBatchCount =
@@ -1640,6 +1699,7 @@ fun ModelRunScreen(
 
                                 batchGenerationJob = coroutineScope.launch {
                                     for (i in 0 until actualBatchCount) {
+                                        BackgroundGenerationService.resetState()
                                         currentBatchIndex = i + 1
                                         Log.d(
                                             "ModelRunScreen",
@@ -1687,17 +1747,15 @@ fun ModelRunScreen(
                                             putExtra("runtime_backend", runtimeBackend.value)
                                             putExtra("scheduler", scheduler)
                                             putExtra("batch_index", i)
-                                            val hasPrimaryRef = if (runtimeBackend == RuntimeBackend.ADRENO) {
-                                                (selectedImageUri != null && base64EncodeDone) ||
-                                                    File(context.filesDir, "tmp.txt").exists()
-                                            } else {
-                                                selectedImageUri != null && base64EncodeDone
-                                            }
-                                            val hasSecondaryRef = if (runtimeBackend == RuntimeBackend.ADRENO) {
-                                                (selectedImageUriRef2 != null && base64EncodeDoneRef2) ||
-                                                    File(context.filesDir, "tmp_ref2.txt").exists()
-                                            } else {
-                                                selectedImageUriRef2 != null && base64EncodeDoneRef2
+                                            // Only use refs explicitly selected in current UI session.
+                                            // Stale tmp.txt/tmp_ref2.txt from old edit runs must not
+                                            // silently force later txt2img requests into img2img.
+                                            val hasPrimaryRef = selectedImageUri != null && base64EncodeDone
+                                            val hasSecondaryRef = selectedImageUriRef2 != null && base64EncodeDoneRef2
+                                            if (!hasPrimaryRef && runtimeBackend == RuntimeBackend.ADRENO) {
+                                                File(context.filesDir, "tmp.txt").delete()
+                                                File(context.filesDir, "tmp_ref2.txt").delete()
+                                                File(context.filesDir, "mask.txt").delete()
                                             }
                                             if (hasPrimaryRef) {
                                                 putExtra("has_image", true)
@@ -1721,7 +1779,7 @@ fun ModelRunScreen(
                                             "start service sent - batch $i"
                                         )
 
-                                        BackgroundGenerationService.generationState
+                                        val finalState = BackgroundGenerationService.generationState
                                             .first { state ->
                                                 state is GenerationState.Complete ||
                                                         state is GenerationState.Error
@@ -1732,10 +1790,25 @@ fun ModelRunScreen(
                                             "batch $i completed, waiting for service to stop"
                                         )
 
+                                        if (finalState is GenerationState.Complete) {
+                                            val consumeStartTime = System.currentTimeMillis()
+                                            val consumeTimeoutMs = 30000L
+                                            while (!BackgroundGenerationService.bitmapConsumed.value) {
+                                                if (System.currentTimeMillis() - consumeStartTime > consumeTimeoutMs) {
+                                                    Log.w(
+                                                        "ModelRunScreen",
+                                                        "Timeout waiting for bitmap consumption callback"
+                                                    )
+                                                    break
+                                                }
+                                                delay(100)
+                                            }
+                                        }
+
                                         // Wait for service to actually stop
                                         val waitStartTime =
                                             System.currentTimeMillis()
-                                        val timeoutMs = 5000L
+                                        val timeoutMs = 30000L
                                         while (BackgroundGenerationService.isServiceRunning.value) {
                                             if (System.currentTimeMillis() - waitStartTime > timeoutMs) {
                                                 Log.w(
@@ -1751,12 +1824,6 @@ fun ModelRunScreen(
                                             "ModelRunScreen",
                                             "service stopped, wait time: ${System.currentTimeMillis() - waitStartTime}ms"
                                         )
-
-                                        BackgroundGenerationService.resetState()
-                                        Log.d(
-                                            "ModelRunScreen",
-                                            "service state reset, ready for next batch"
-                                        )
                                     }
                                     currentBatchIndex = 0
                                     isRunning = false
@@ -1766,11 +1833,11 @@ fun ModelRunScreen(
                                     )
                                 }
                             },
-                            enabled = serviceState !is GenerationState.Progress && !isRunning && !isUpscaling,
+                            enabled = serviceState !is GenerationState.Progress && !isRunning && !isUpscaling && !serviceRunning,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            if (serviceState is GenerationState.Progress || isUpscaling) {
+                            if (serviceState is GenerationState.Progress || serviceRunning || isUpscaling) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp),
                                     color = MaterialTheme.colorScheme.onPrimary
@@ -1817,7 +1884,7 @@ fun ModelRunScreen(
                 }
             }
             AnimatedVisibility(
-                visible = isRunning,
+                visible = isRunning || serviceRunning,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
