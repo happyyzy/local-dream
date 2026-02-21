@@ -288,9 +288,18 @@ class BackendService : Service() {
         val merged = JSONObject(config.toString())
         merged.remove("profiles")
         mergeJsonObject(merged, profile)
+        val forceEdit512LegacyPath = mode != "txt2img" && maxSide <= 512
+        if (forceEdit512LegacyPath) {
+            // Keep 512 edit path aligned with validated step28/29 perf baseline.
+            merged.put("qcom_ml_host_attn", "0")
+            merged.put("qcom_ml_prepare", "0")
+            if (!merged.has("qcom_ml_fallback_attn_16384")) {
+                merged.put("qcom_ml_fallback_attn_16384", "1")
+            }
+        }
         Log.i(
             TAG,
-            "Adreno profile override applied: key=$selectedKey mode=$mode (request=${width}x${height})"
+            "Adreno profile override applied: key=$selectedKey mode=$mode (request=${width}x${height}, force_edit512_legacy=$forceEdit512LegacyPath)"
         )
         return merged
     }
