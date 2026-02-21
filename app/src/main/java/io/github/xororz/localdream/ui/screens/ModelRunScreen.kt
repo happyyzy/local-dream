@@ -1797,6 +1797,7 @@ fun ModelRunScreen(
                                             )
                                             putExtra("use_opencl", useOpenCL)
                                             putExtra("runtime_backend", runtimeBackend.value)
+                                            putExtra("modelId", modelId)
                                             putExtra("scheduler", scheduler)
                                             putExtra("batch_index", i)
                                             // Only use refs explicitly selected in current UI session.

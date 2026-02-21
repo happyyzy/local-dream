@@ -120,6 +120,7 @@ class BackgroundGenerationService : Service() {
         val runtimeBackend = RuntimeBackend.fromValue(
             intent.getStringExtra("runtime_backend")
         )
+        val modelId = intent.getStringExtra("modelId") ?: ""
         val scheduler = intent.getStringExtra("scheduler") ?: "dpm"
 
         val image = if (intent.getBooleanExtra("has_image", false)) {
@@ -195,6 +196,7 @@ class BackgroundGenerationService : Service() {
                 denoiseStrength,
                 useOpenCL,
                 runtimeBackend,
+                modelId,
                 scheduler
             )
         }
@@ -216,6 +218,7 @@ class BackgroundGenerationService : Service() {
         denoiseStrength: Float,
         useOpenCL: Boolean,
         runtimeBackend: RuntimeBackend,
+        modelId: String,
         scheduler: String
     ) = withContext(Dispatchers.IO) {
         try {
@@ -234,6 +237,7 @@ class BackgroundGenerationService : Service() {
                     extraImage = extraImage,
                     mask = mask,
                     denoiseStrength = denoiseStrength,
+                    modelId = modelId,
                     scheduler = scheduler
                 )
                 return@withContext
@@ -520,6 +524,7 @@ class BackgroundGenerationService : Service() {
         extraImage: String?,
         mask: String?,
         denoiseStrength: Float,
+        modelId: String,
         scheduler: String
     ) = withContext(Dispatchers.IO) {
         val client = OkHttpClient.Builder()
@@ -530,10 +535,11 @@ class BackgroundGenerationService : Service() {
             .retryOnConnectionFailure(true)
             .build()
 
+        val isFlux2Adreno = modelId == "flux2_klein_adreno"
         val samplerName = when (scheduler) {
             "euler_a" -> "euler_a"
-            // Flux2 Adreno path is tuned/validated with Euler in our perf gates.
-            "dpm" -> "euler"
+            // Keep Flux2 latency gate on Euler; other models use true DPM quality path.
+            "dpm" -> if (isFlux2Adreno) "euler" else "dpm++ 2m"
             else -> "dpm++ 2m"
         }
         // For cfg_scale ~= 1, disabling CFG avoids the uncond branch and matches our

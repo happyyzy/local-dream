@@ -413,6 +413,7 @@ class BackendService : Service() {
                 val condCrossAttn = resolveModelPath(modelsDir, config?.optString("cond_crossattn"))
                 val uncondCrossAttn =
                     resolveModelPath(modelsDir, config?.optString("uncond_crossattn"))
+                val usePrecomputedCond = config?.optBoolean("use_precomputed_cond", false) ?: false
                 val vaeModel = resolveModelPath(modelsDir, config?.optString("vae"))
                     ?: firstExisting(
                         modelsDir,
@@ -461,10 +462,10 @@ class BackendService : Service() {
                 if (llmModel != null) {
                     adrenoCmd += listOf("--llm", llmModel.absolutePath)
                 }
-                if (condCrossAttn != null) {
+                if (condCrossAttn != null && (llmModel == null || usePrecomputedCond)) {
                     adrenoCmd += listOf("--cond-crossattn", condCrossAttn.absolutePath)
                 }
-                if (uncondCrossAttn != null) {
+                if (uncondCrossAttn != null && (llmModel == null || usePrecomputedCond)) {
                     adrenoCmd += listOf("--uncond-crossattn", uncondCrossAttn.absolutePath)
                 }
                 if (enableFlashAttn) adrenoCmd += "--fa"
