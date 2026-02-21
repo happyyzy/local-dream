@@ -538,12 +538,19 @@ class BackendService : Service() {
                 command = adrenoCmd
                 runDir = executable.parentFile ?: runtimeDir
             } else {
+                val clip2File = File(modelsDir, "clip_2.mnn")
+                val tokenizer2File = File(modelsDir, "tokenizer_2.json")
                 val hasSdxlHint = !model.runOnCpu && model.isCustom &&
                     (
-                        File(modelsDir, "clip_2.mnn").exists() ||
-                            File(modelsDir, "tokenizer_2.json").exists() ||
+                        clip2File.exists() ||
+                            tokenizer2File.exists() ||
                             File(modelsDir, "unet_1024.bin").exists()
                         )
+                val useSdxlDualEncoder = hasSdxlHint &&
+                    clip2File.exists() &&
+                    tokenizer2File.exists() &&
+                    File(modelsDir, "clip.mnn").exists() &&
+                    File(modelsDir, "tokenizer.json").exists()
 
                 var clipFile = if (model.useCpuClip) {
                     File(modelsDir, "clip.mnn")
@@ -555,15 +562,16 @@ class BackendService : Service() {
                 var vaeDecoderFile = File(modelsDir, "vae_decoder.bin")
                 var textEmbeddingSize = model.textEmbeddingSize
 
-                if (hasSdxlHint) {
+                if (useSdxlDualEncoder) {
+                    // Keep SDXL dual-encoder wiring compatible with legacy NPU packs.
+                    textEmbeddingSize = 2048
+                } else if (hasSdxlHint) {
                     textEmbeddingSize = 1024
-                    val clip2 = File(modelsDir, "clip_2.mnn")
-                    if (clip2.exists()) {
-                        clipFile = clip2
+                    if (clip2File.exists()) {
+                        clipFile = clip2File
                     }
-                    val tokenizer2 = File(modelsDir, "tokenizer_2.json")
-                    if (tokenizer2.exists()) {
-                        tokenizerFile = tokenizer2
+                    if (tokenizer2File.exists()) {
+                        tokenizerFile = tokenizer2File
                     }
                 }
 
@@ -591,6 +599,13 @@ class BackendService : Service() {
                     "--port", "8081",
                     "--text_embedding_size", textEmbeddingSize.toString()
                 )
+                if (useSdxlDualEncoder) {
+                    defaultCommand = defaultCommand + listOf(
+                        "--sdxl",
+                        "--clip_2", clip2File.absolutePath,
+                        "--tokenizer_2", tokenizer2File.absolutePath
+                    )
+                }
                 if ((width != 512 || height != 512) && !useDirect1024Binary) {
                     val patchFile = if (width == height) {
                         val squarePatch = File(modelsDir, "${width}.patch")
