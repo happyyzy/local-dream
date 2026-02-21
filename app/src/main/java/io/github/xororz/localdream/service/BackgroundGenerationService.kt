@@ -536,10 +536,15 @@ class BackgroundGenerationService : Service() {
             .build()
 
         val isFlux2Adreno = modelId == "flux2_klein_adreno"
+        val isZImageAdreno = modelId == "z_image_turbo_adreno"
         val samplerName = when (scheduler) {
             "euler_a" -> "euler_a"
-            // Keep Flux2 latency gate on Euler; other models use true DPM quality path.
-            "dpm" -> if (isFlux2Adreno) "euler" else "dpm++ 2m"
+            // Keep each Adreno preset aligned with its validated sampler route.
+            "dpm" -> when {
+                isFlux2Adreno -> "euler"
+                isZImageAdreno -> "euler"
+                else -> "dpm++ 2m"
+            }
             else -> "dpm++ 2m"
         }
         // For cfg_scale ~= 1, disabling CFG avoids the uncond branch and matches our
