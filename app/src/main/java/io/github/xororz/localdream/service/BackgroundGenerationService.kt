@@ -261,6 +261,10 @@ class BackgroundGenerationService : Service() {
                 put("scheduler", scheduler)
                 put("show_diffusion_process", showProcess)
                 put("show_diffusion_stride", showStride)
+                // Keep SDXL 1024 NPU on full-frame decode path (avoid slow 9-tile VAE).
+                if (modelId == "sdxl_npu_1024" && width >= 1024 && height >= 1024) {
+                    put("use_vae_tiling", false)
+                }
                 seed?.let { put("seed", it) }
                 image?.let { put("image", it) }
                 mask?.let { put("mask", it) }

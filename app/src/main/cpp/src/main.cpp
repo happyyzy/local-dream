@@ -2034,8 +2034,12 @@ GenerationResult generateImage(
     // --- VAE Decode ---
     auto vae_dec_start = std::chrono::high_resolution_clock::now();
 
+    // For direct 1024 NPU VAE binaries, full-frame decode is faster and validated.
+    const bool is_direct_vae_1024 =
+        (vaeDecoderPath.find("vae_decoder_1024.bin") != std::string::npos);
     bool need_vae_tiling =
-        ((output_width > 512 || output_height > 512) && !use_mnn);
+        ((output_width > 512 || output_height > 512) && !use_mnn &&
+         !is_direct_vae_1024);
     if (need_vae_tiling) {
       std::cout << "Using VAE decoder tiling for " << output_width << "x"
                 << output_height << " output..." << std::endl;
