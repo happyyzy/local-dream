@@ -43,6 +43,7 @@ Current milestone focus:
 - Governance and contribution policy in `docs/` and `CONTRIBUTING.md`.
 
 Relevant entry points:
+- `docs/adreno/fork_model_feature_matrix.md`
 - `docs/branching.md`
 - `docs/performance/methodology.md`
 - `docs/fork_bootstrap.md`

@@ -17,6 +17,7 @@ app/src/main/assets/qnnlibs
 out/
 artifacts/
 tmp/
+.hf_stage/
 benchmarks/results/*.local.csv
 .env
 .venv/
