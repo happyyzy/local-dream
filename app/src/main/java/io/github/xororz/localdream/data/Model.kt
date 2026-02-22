@@ -16,6 +16,21 @@ import android.content.Intent
 import android.util.Log
 
 private const val DEFAULT_MODEL_BASE_URL = "https://hf-mirror.com/"
+private const val SDXL_MANIFEST_CTXBIN = "zhiyuanasad/sdxl_npu_1024_ctxbin/resolve/main/download_manifest.json"
+private const val SDXL_MANIFEST_UNIFIED = "zhiyuanasad/sdxl_npu_1024_unified/resolve/main/download_manifest.json"
+private val SDXL_CONTEXT_SOCS = setOf(
+    "SM8750",
+    "SM8750P",
+    "SM8850",
+    "SM8850P"
+)
+private val FINISHED_MARKER_MODEL_IDS = setOf(
+    "flux2_klein_adreno",
+    "z_image_turbo_adreno",
+    "sdxl_base_npu",
+    "sdxl_npu_1024_ctxbin",
+    "sdxl_npu_1024_unified"
+)
 
 data class Resolution(
     val width: Int,
@@ -232,7 +247,7 @@ data class Model(
                 return false
             }
 
-            if (modelId == "flux2_klein_adreno" || modelId == "z_image_turbo_adreno") {
+            if (modelId in FINISHED_MARKER_MODEL_IDS) {
                 return File(modelDir, "finished").exists()
             }
 
@@ -427,6 +442,7 @@ class ModelRepository(private val context: Context) {
         val predefinedModels = mutableListOf(
             createFlux2KleinAdrenoModel(),
             createZImageTurboAdrenoModel(),
+            createSdxlBaseNpuModel(),
             createAnythingV5Model(),
             createAnythingV5ModelCPU(),
             createQteaMixModel(),
@@ -485,6 +501,30 @@ class ModelRepository(private val context: Context) {
             defaultPrompt = "a detailed photo portrait, soft studio lighting, high detail skin and eyes",
             defaultNegativePrompt = "worst quality, low quality, overexposed, blurry, artifacts",
             runOnCpu = true,
+            useCpuClip = true
+        )
+    }
+
+    private fun createSdxlBaseNpuModel(): Model {
+        val id = "sdxl_base_npu"
+        val soc = getDeviceSoc()
+        // Route by chipset class. Elite-class SoCs use the tuned context package.
+        val manifestUri = if (soc in SDXL_CONTEXT_SOCS) SDXL_MANIFEST_CTXBIN else SDXL_MANIFEST_UNIFIED
+        val isDownloaded = Model.isModelDownloaded(context, id, false)
+
+        return Model(
+            id = id,
+            name = "SDXL Base",
+            description = context.getString(R.string.sdxl_base_npu_description),
+            baseUrl = baseUrl,
+            manifestUri = manifestUri,
+            generationSize = 1024,
+            textEmbeddingSize = 1024,
+            approximateSize = "6.3GB",
+            isDownloaded = isDownloaded,
+            defaultPrompt = "cinematic portrait photo, rich lighting, detailed skin, high detail",
+            defaultNegativePrompt = "worst quality, low quality, blurry, artifacts",
+            runOnCpu = false,
             useCpuClip = true
         )
     }

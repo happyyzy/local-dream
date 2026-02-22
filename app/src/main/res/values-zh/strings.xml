@@ -12,6 +12,9 @@
     <string name="ponyv55_description">Pony Diffusion系列</string>
     <string name="flux2_klein_adreno_description">Flux2 Klein Q4_0（Adreno优化）</string>
     <string name="z_image_turbo_adreno_description">Z Image Turbo Q4_0（Adreno优化）</string>
+    <string name="sdxl_base_npu_description">SDXL Base NPU（1024×1024，自动匹配context）</string>
+    <string name="sdxl_npu_1024_ctxbin_description">SDXL 1024 NPU（设备特化包）</string>
+    <string name="sdxl_npu_1024_unified_description">SDXL 1024 NPU（统一包）</string>
 
     <!-- Models -->
     <string name="backend_notify">模型服务运行中</string>

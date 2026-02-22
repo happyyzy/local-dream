@@ -1453,7 +1453,13 @@ fun ModelCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = if (model.runOnCpu) "128~512" else "${model.generationSize}×${model.generationSize}",
+                                text = when {
+                                    model.id == "flux2_klein_adreno" ||
+                                        model.id == "z_image_turbo_adreno" -> "512~1024"
+                                    model.id == "sdxl_base_npu" -> "1024×1024"
+                                    model.runOnCpu -> "128~512"
+                                    else -> "${model.generationSize}×${model.generationSize}"
+                                },
                                 style = MaterialTheme.typography.labelMedium,
                                 color = contentColor.copy(alpha = 0.7f)
                             )
