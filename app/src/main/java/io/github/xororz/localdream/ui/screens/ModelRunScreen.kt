@@ -384,6 +384,7 @@ fun ModelRunScreen(
     var showCropScreen by remember { mutableStateOf(false) }
     var imageUriForCrop by remember { mutableStateOf<Uri?>(null) }
     var imageRefSlotForCrop by remember { mutableStateOf(RefSlot.PRIMARY) }
+    var imageRefSlotForPicker by remember { mutableStateOf(RefSlot.PRIMARY) }
     var croppedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var croppedBitmapRef2 by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -507,8 +508,9 @@ fun ModelRunScreen(
     }
 
     fun handleCropComplete(base64String: String, bitmap: Bitmap, rect: AndroidRect) {
+        val slot = imageRefSlotForCrop
         showCropScreen = false
-        if (imageRefSlotForCrop == RefSlot.PRIMARY) {
+        if (slot == RefSlot.PRIMARY) {
             selectedImageUri = imageUriForCrop
             croppedBitmap = bitmap
             cropRect = rect
@@ -520,30 +522,41 @@ fun ModelRunScreen(
 
         scope.launch(Dispatchers.IO) {
             try {
-                if (imageRefSlotForCrop == RefSlot.PRIMARY) {
-                    base64EncodeDone = false
+                withContext(Dispatchers.Main) {
+                    if (slot == RefSlot.PRIMARY) {
+                        base64EncodeDone = false
+                    } else {
+                        base64EncodeDoneRef2 = false
+                    }
+                }
+
+                if (slot == RefSlot.PRIMARY) {
                     val tmpFile = File(context.filesDir, "tmp.txt")
                     tmpFile.writeText(base64String)
-                    base64EncodeDone = true
                 } else {
-                    base64EncodeDoneRef2 = false
                     val tmpFile = File(context.filesDir, "tmp_ref2.txt")
                     tmpFile.writeText(base64String)
-                    base64EncodeDoneRef2 = true
                 }
                 withContext(Dispatchers.Main) {
+                    if (slot == RefSlot.PRIMARY) {
+                        base64EncodeDone = true
+                    } else {
+                        base64EncodeDoneRef2 = true
+                    }
                     restartAdrenoBackendForCurrentParams()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Save failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                    if (imageRefSlotForCrop == RefSlot.PRIMARY) {
+                    if (slot == RefSlot.PRIMARY) {
                         selectedImageUri = null
                         croppedBitmap = null
                         cropRect = null
+                        base64EncodeDone = false
                     } else {
                         selectedImageUriRef2 = null
                         croppedBitmapRef2 = null
+                        base64EncodeDoneRef2 = false
                     }
                 }
             }
@@ -580,13 +593,13 @@ fun ModelRunScreen(
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->
-        uri?.let { processSelectedImage(it, imageRefSlotForCrop) }
+        uri?.let { processSelectedImage(it, imageRefSlotForPicker) }
     }
 
     val contentPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
-        uri?.let { processSelectedImage(it, imageRefSlotForCrop) }
+        uri?.let { processSelectedImage(it, imageRefSlotForPicker) }
     }
 
     val requestMediaImagePermissionLauncher = rememberLauncherForActivityResult(
@@ -618,7 +631,18 @@ fun ModelRunScreen(
     }
 
     fun onSelectImageClick(slot: RefSlot = RefSlot.PRIMARY) {
-        imageRefSlotForCrop = slot
+        val effectiveSlot = if (
+            slot == RefSlot.SECONDARY &&
+            (selectedImageUri == null || !base64EncodeDone)
+        ) {
+            Toast.makeText(context, "请先设置第一张参考图", Toast.LENGTH_SHORT).show()
+            RefSlot.PRIMARY
+        } else {
+            slot
+        }
+
+        imageRefSlotForPicker = effectiveSlot
+        imageRefSlotForCrop = effectiveSlot
         when {
             // Android 13+
             Build.VERSION.SDK_INT >= 33 -> {
@@ -1715,6 +1739,24 @@ fun ModelRunScreen(
                         Button(
                             onClick = {
                                 focusManager.clearFocus()
+                                if ((selectedImageUri != null && !base64EncodeDone) ||
+                                    (selectedImageUriRef2 != null && !base64EncodeDoneRef2)
+                                ) {
+                                    Toast.makeText(
+                                        context,
+                                        "参考图仍在处理，请稍后再生成",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@Button
+                                }
+                                if (isCheckingBackend) {
+                                    Toast.makeText(
+                                        context,
+                                        "后端加载中，请稍后",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@Button
+                                }
                                 Log.d(
                                     "ModelRunScreen",
                                     "start generation"
@@ -1776,40 +1818,53 @@ fun ModelRunScreen(
                                             scheduler = scheduler
                                         )
 
+                                        val tmpPrimaryRef = File(context.filesDir, "tmp.txt")
+                                        val tmpSecondaryRef = File(context.filesDir, "tmp_ref2.txt")
+                                        val hasPrimaryRefFromUi = selectedImageUri != null && base64EncodeDone
+                                        val hasSecondaryRefFromUi =
+                                            selectedImageUriRef2 != null && base64EncodeDoneRef2
+                                        val hasPrimaryRefFromFile =
+                                            tmpPrimaryRef.exists() && tmpPrimaryRef.length() > 0L
+                                        val hasSecondaryRefFromFile =
+                                            tmpSecondaryRef.exists() && tmpSecondaryRef.length() > 0L
+                                        val hasPrimaryRef =
+                                            useImg2img && hasPrimaryRefFromUi
+                                        val hasSecondaryRef =
+                                            hasPrimaryRef && hasSecondaryRefFromUi
+
+                                        if (runtimeBackend == RuntimeBackend.ADRENO) {
+                                            if (!hasPrimaryRef) {
+                                                tmpPrimaryRef.delete()
+                                                tmpSecondaryRef.delete()
+                                                File(context.filesDir, "mask.txt").delete()
+                                            } else if (!hasSecondaryRef) {
+                                                // Avoid stale ref2 forcing edit_ref2 profile selection.
+                                                tmpSecondaryRef.delete()
+                                            }
+                                        }
+
+                                        Log.d(
+                                            "ModelRunScreen",
+                                            "ref flags: useImg2img=$useImg2img primary(ui=$hasPrimaryRefFromUi,file=$hasPrimaryRefFromFile,effective=$hasPrimaryRef) secondary(ui=$hasSecondaryRefFromUi,file=$hasSecondaryRefFromFile,effective=$hasSecondaryRef)"
+                                        )
+
                                         val batchIntent = Intent(
                                             context,
                                             BackgroundGenerationService::class.java
                                         ).apply {
                                             putExtra("prompt", prompt)
-                                            putExtra(
-                                                "negative_prompt",
-                                                negativePrompt
-                                            )
+                                            putExtra("negative_prompt", negativePrompt)
                                             putExtra("steps", steps.roundToInt())
                                             putExtra("cfg", cfg)
-                                            seed.toLongOrNull()
-                                                ?.let { putExtra("seed", it) }
+                                            seed.toLongOrNull()?.let { putExtra("seed", it) }
                                             putExtra("width", currentWidth)
                                             putExtra("height", currentHeight)
-                                            putExtra(
-                                                "denoise_strength",
-                                                denoiseStrength
-                                            )
+                                            putExtra("denoise_strength", denoiseStrength)
                                             putExtra("use_opencl", useOpenCL)
                                             putExtra("runtime_backend", runtimeBackend.value)
                                             putExtra("modelId", modelId)
                                             putExtra("scheduler", scheduler)
                                             putExtra("batch_index", i)
-                                            // Only use refs explicitly selected in current UI session.
-                                            // Stale tmp.txt/tmp_ref2.txt from old edit runs must not
-                                            // silently force later txt2img requests into img2img.
-                                            val hasPrimaryRef = selectedImageUri != null && base64EncodeDone
-                                            val hasSecondaryRef = selectedImageUriRef2 != null && base64EncodeDoneRef2
-                                            if (!hasPrimaryRef && runtimeBackend == RuntimeBackend.ADRENO) {
-                                                File(context.filesDir, "tmp.txt").delete()
-                                                File(context.filesDir, "tmp_ref2.txt").delete()
-                                                File(context.filesDir, "mask.txt").delete()
-                                            }
                                             if (hasPrimaryRef) {
                                                 putExtra("has_image", true)
                                                 if (hasSecondaryRef) {
@@ -1886,7 +1941,7 @@ fun ModelRunScreen(
                                     )
                                 }
                             },
-                            enabled = !isRunning && !isUpscaling && !serviceRunning,
+                            enabled = !isRunning && !isUpscaling && !serviceRunning && !isCheckingBackend,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
@@ -2190,7 +2245,8 @@ fun ModelRunScreen(
                                                 croppedBitmapRef2 = null
                                                 base64EncodeDoneRef2 = false
                                                 File(context.filesDir, "tmp_ref2.txt").delete()
-                                                restartAdrenoBackendForCurrentParams()
+                                                // Keep primary ref state intact; backend profile
+                                                // will be refreshed by the next explicit param-change restart.
                                             },
                                             modifier = Modifier
                                                 .size(24.dp)

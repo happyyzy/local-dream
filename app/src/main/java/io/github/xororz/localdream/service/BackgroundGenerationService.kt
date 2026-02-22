@@ -29,6 +29,13 @@ import io.github.xororz.localdream.R
 import java.io.File
 import androidx.core.graphics.createBitmap
 
+private val SDXL_NPU_1024_MODEL_IDS = setOf(
+    "sdxl_npu_1024",
+    "sdxl_base_npu",
+    "sdxl_npu_1024_ctxbin",
+    "sdxl_npu_1024_unified"
+)
+
 class BackgroundGenerationService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private val notificationManager by lazy { getSystemService(NOTIFICATION_SERVICE) as NotificationManager }
@@ -262,7 +269,7 @@ class BackgroundGenerationService : Service() {
                 put("show_diffusion_process", showProcess)
                 put("show_diffusion_stride", showStride)
                 // Keep SDXL 1024 NPU on full-frame decode path (avoid slow 9-tile VAE).
-                if (modelId == "sdxl_npu_1024" && width >= 1024 && height >= 1024) {
+                if (modelId in SDXL_NPU_1024_MODEL_IDS && width >= 1024 && height >= 1024) {
                     put("use_vae_tiling", false)
                 }
                 seed?.let { put("seed", it) }
@@ -496,16 +503,27 @@ class BackgroundGenerationService : Service() {
         steps: Int,
         width: Int,
         height: Int,
-        hasInitImage: Boolean
+        hasInitImage: Boolean,
+        modelId: String
     ): Long {
         val areaScale = (width.toDouble() * height.toDouble()) / (512.0 * 512.0)
+        val isFlux2 = modelId == "flux2_klein_adreno"
+        val isZImage = modelId == "z_image_turbo_adreno"
+
+        // Progress estimate is model-specific: Flux2 1024 is much faster than Z-Image 1024.
         val samplePerStepSec = when {
-            areaScale >= 3.8 -> 56.0
-            areaScale >= 1.8 -> 20.0
+            isFlux2 && areaScale >= 3.8 -> 31.0
+            isFlux2 && areaScale >= 1.8 -> 12.0
+            isFlux2 -> 8.6
+            isZImage && areaScale >= 3.8 -> 56.0
+            isZImage && areaScale >= 1.8 -> 20.0
             else -> 8.6
         }
         val sampleSec = samplePerStepSec * steps.coerceAtLeast(1)
         val vaeSec = when {
+            isFlux2 && areaScale >= 3.8 -> 6.0
+            isFlux2 && areaScale >= 1.8 -> 3.6
+            isFlux2 -> 2.4
             areaScale >= 3.8 -> 24.0
             areaScale >= 1.8 -> 10.0
             else -> 3.3
@@ -586,7 +604,13 @@ class BackgroundGenerationService : Service() {
         Log.d("GenerationService", "sdapi endpoint=$endpoint payload=${payload}")
 
         val estimatedTotalMs =
-            estimateAdrenoSdApiDurationMs(steps, width, height, hasInitImage = image != null)
+            estimateAdrenoSdApiDurationMs(
+                steps,
+                width,
+                height,
+                hasInitImage = image != null,
+                modelId = modelId
+            )
         Log.d(
             "GenerationService",
             "Adreno progress estimate: ${estimatedTotalMs}ms (steps=$steps, ${width}x${height}, img2img=${image != null})"

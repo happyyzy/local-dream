@@ -318,12 +318,18 @@ class BackendService : Service() {
         return null
     }
 
+    @Synchronized
     private fun startBackend(
         model: Model,
         width: Int,
         height: Int,
         runtimeBackend: RuntimeBackend
     ): Boolean {
+        if (process != null) {
+            Log.i(TAG, "existing backend process detected, stopping before restart")
+            stopBackend()
+        }
+
         Log.i(
             TAG,
             "backend start, model: ${model.name}, resolution: ${width}×${height}, runtime: ${runtimeBackend.value}"
@@ -540,7 +546,7 @@ class BackendService : Service() {
             } else {
                 val clip2File = File(modelsDir, "clip_2.mnn")
                 val tokenizer2File = File(modelsDir, "tokenizer_2.json")
-                val hasSdxlHint = !model.runOnCpu && model.isCustom &&
+                val hasSdxlHint = !model.runOnCpu &&
                     (
                         clip2File.exists() ||
                             tokenizer2File.exists() ||
@@ -740,6 +746,7 @@ class BackendService : Service() {
         stopBackend()
     }
 
+    @Synchronized
     fun stopBackend() {
         Log.i(TAG, "to stop backend")
         process?.let { proc ->
