@@ -62,6 +62,16 @@ Device: `Snapdragon 8 Elite (Adreno 830)`
 Speed: `38.5s / 4 steps`
 Config: `FLUX.2-klein`, `512x512`, `4 steps`, `OpenCL + Adreno path`
 
+![Z-Image turbo 512 txt2img](./docs/adreno/assets/step38/step38_step33_zimg512.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `1m7s / 8 steps`
+Config: `Z-Image turbo`, `512x512`, `8 steps`, `DPM++ 2M`, `OpenCL + Adreno path`
+
+![Z-Image turbo 1024 txt2img](./docs/adreno/assets/step38/step38_step34_zimg1024.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `7m16s / 8 steps`
+Config: `Z-Image turbo`, `1024x1024`, `8 steps`, `DPM++ 2M`, `OpenCL + Adreno path`
+
 ![FLUX.2-klein 512 edit (2 refs)](./docs/adreno/assets/step38/step38_step35_edit_ref2.png)
 Device: `Snapdragon 8 Elite (Adreno 830)`
 Speed: `1m9s / 4 steps`
