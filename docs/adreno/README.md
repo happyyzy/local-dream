@@ -36,5 +36,4 @@ This logbook tracks local-dream integration acceptance for the sd.cpp Adreno pat
 
 ## Notes
 
-- Raw `exp_*` logs, JSON history dumps, and full run artifacts are retained in local experiment workspaces.
 - This repository keeps acceptance summaries, lightweight UI/output assets, and replayable step docs.

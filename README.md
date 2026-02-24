@@ -32,7 +32,6 @@ If you like it, please consider [sponsor](https://github.com/xororz/local-dream?
 ### Entry Points
 
 - Full logbook: `docs/adreno/README.md`
-- Step acceptance docs: `docs/adreno/steps/step36.md`, `docs/adreno/steps/step37.md`, `docs/adreno/steps/step38.md`
 - Model/routing map: `docs/adreno/fork_model_feature_matrix.md`
 - Runtime switches: `docs/adreno/flags.md`
 - Branch policy: `docs/branching.md`
@@ -41,31 +40,37 @@ If you like it, please consider [sponsor](https://github.com/xororz/local-dream?
 ### Branch Model
 
 - `upstream-sync`: pure sync line with `xororz/local-dream`
-- `work/main`: performance and app acceptance line
+- `work/main`: performance and app acceptance line (default showcase)
 - `pr/main`: upstream-facing clean PR line
 - `debug/*`: replay/debug branches
 
-### Performance Snapshot (Phone App Acceptance)
+### Performance Snapshot (Phone App Gate)
 
-| Scenario | Target | Achieved | Status | Evidence |
-|---|---:|---:|---:|---|
-| FLUX.2-klein 512 txt2img (4-step) | `<= 40s` | `38.5s` | pass | `docs/adreno/steps/step38.md` |
-| FLUX.2-klein 1024 txt2img (4-step) | `<= 142s` | `2m14s` | pass | `docs/adreno/steps/step38.md` |
-| Z-Image turbo 512 txt2img (8-step) | `<= 100s` | `1m7s` | pass | `docs/adreno/steps/step38.md` |
-| Z-Image turbo 1024 txt2img (8-step) | `<= 480s` | `7m16s` | pass | `docs/adreno/steps/step38.md` |
-| FLUX.2-klein 512 edit (2 refs, 4-step) | `<= 100s` | `1m9s` | pass | `docs/adreno/steps/step38.md` |
-| SDXL Base NPU 1024 (20-step) | `~30s class` | `33.3s` | pass | `docs/adreno/steps/step36.md` |
+| Scenario | Target | Achieved | Status |
+|---|---:|---:|---:|
+| FLUX.2-klein 512 txt2img (4-step) | `<= 40s` | `38.5s` | pass |
+| FLUX.2-klein 1024 txt2img (4-step) | `<= 142s` | `2m14s` | pass |
+| Z-Image turbo 512 txt2img (8-step) | `<= 100s` | `1m7s` | pass |
+| Z-Image turbo 1024 txt2img (8-step) | `<= 480s` | `7m16s` | pass |
+| FLUX.2-klein 512 edit (2 refs, 4-step) | `<= 100s` | `1m9s` | pass |
+| SDXL Base NPU 1024 (20-step) | `~30s class` | `33.3s` | pass |
 
-### App UI / Output Evidence
+### Showcase (Local Dream App)
 
-| Case | Screenshot |
-|---|---|
-| FLUX.2-klein 512 output (Step31) | <img src="./docs/adreno/assets/step38/step38_step31_flux512.png" width="280" /> |
-| FLUX.2-klein edit output (Step35 ref2) | <img src="./docs/adreno/assets/step38/step38_step35_edit_ref2.png" width="280" /> |
-| SDXL Base NPU 1024 output (Step36) | <img src="./docs/adreno/assets/step36/step36_sdxl1024_20step_33_3s.png" width="280" /> |
-| Model download dialog (Step37) | <img src="./docs/adreno/assets/step37/step37_flux_download_dialog.png" width="280" /> |
+![FLUX.2-klein 512 txt2img](./docs/adreno/assets/step38/step38_step31_flux512.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `38.5s / 4 steps`
+Config: `FLUX.2-klein`, `512x512`, `4 steps`, `OpenCL + Adreno path`
 
-Raw `exp_*` run logs/images are stored in local experiment workspace; this repo keeps the accepted summary and lightweight assets.
+![FLUX.2-klein 512 edit (2 refs)](./docs/adreno/assets/step38/step38_step35_edit_ref2.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `1m9s / 4 steps`
+Config: `FLUX.2-klein edit`, `512x512`, `2 refs`, `OpenCL + Adreno path`
+
+![SDXL Base NPU 1024](./docs/adreno/assets/step36/step36_sdxl1024_20step_33_3s.png)
+Device: `Snapdragon 8 Elite (HTP v79)`
+Speed: `33.3s / 20 steps`
+Config: `SDXL Base`, `1024x1024`, `Euler`, `CFG=7`
 
 ## 🚀 Quick Start
 
