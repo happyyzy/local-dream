@@ -44,43 +44,16 @@ If you like it, please consider [sponsor](https://github.com/xororz/local-dream?
 - `pr/main`: upstream-facing clean PR line
 - `debug/*`: replay/debug branches
 
-### Performance Snapshot (Phone App Gate)
+### SDXL 1024 Real Device Showcase (Fork Main)
 
-| Scenario | Target | Achieved | Status |
-|---|---:|---:|---:|
-| FLUX.2-klein 512 txt2img (4-step) | `<= 40s` | `38.5s` | pass |
-| FLUX.2-klein 1024 txt2img (4-step) | `<= 142s` | `2m14s` | pass |
-| Z-Image turbo 512 txt2img (8-step) | `<= 100s` | `1m7s` | pass |
-| Z-Image turbo 1024 txt2img (8-step) | `<= 480s` | `7m16s` | pass |
-| FLUX.2-klein 512 edit (2 refs, 4-step) | `<= 100s` | `1m9s` | pass |
-| SDXL Base NPU 1024 (20-step) | `~30s class` | `33.3s` | pass |
-
-### Showcase (Local Dream App)
-
-![FLUX.2-klein 512 txt2img](./docs/adreno/assets/step38/step38_step31_flux512.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `38.5s / 4 steps`
-Config: `FLUX.2-klein`, `512x512`, `4 steps`, `OpenCL + Adreno path`
-
-![Z-Image turbo 512 txt2img](./docs/adreno/assets/step38/step38_step33_zimg512.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `1m7s / 8 steps`
-Config: `Z-Image turbo`, `512x512`, `8 steps`, `DPM++ 2M`, `OpenCL + Adreno path`
-
-![Z-Image turbo 1024 txt2img](./docs/adreno/assets/step38/step38_step34_zimg1024.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `7m16s / 8 steps`
-Config: `Z-Image turbo`, `1024x1024`, `8 steps`, `DPM++ 2M`, `OpenCL + Adreno path`
-
-![FLUX.2-klein 512 edit (2 refs)](./docs/adreno/assets/step38/step38_step35_edit_ref2.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `1m9s / 4 steps`
-Config: `FLUX.2-klein edit`, `512x512`, `2 refs`, `OpenCL + Adreno path`
+This fork README only presents the current public gate case in SDXL 1024 style.
 
 ![SDXL Base NPU 1024](./docs/adreno/assets/step36/step36_sdxl1024_20step_33_3s.png)
 Device: `Snapdragon 8 Elite (HTP v79)`
 Speed: `33.3s / 20 steps`
 Config: `SDXL Base`, `1024x1024`, `Euler`, `CFG=7`
+
+For FLUX/Z-Image routes, this README暂不展示速度与图像，待重新逐项复核后再公开。
 
 ## 🚀 Quick Start
 
