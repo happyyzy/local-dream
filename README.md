@@ -44,16 +44,68 @@ If you like it, please consider [sponsor](https://github.com/xororz/local-dream?
 - `pr/main`: upstream-facing clean PR line
 - `debug/*`: replay/debug branches
 
-### SDXL 1024 Real Device Showcase (Fork Main)
+### GOAL.md Final Results (Fork Main)
 
-This fork README only presents the current public gate case in SDXL 1024 style.
+#### Highest Accepted Performance Snapshot
+
+| Scenario | Best Accepted Result |
+|---|---:|
+| FLUX.2-klein 512 txt2img (4-step) | `38.06s` |
+| FLUX.2-klein 1024 txt2img (4-step) | `129.55s` |
+| Z-Image turbo 512 txt2img (8-step) | `95.99s` |
+| Z-Image turbo 1024 txt2img (8-step) | `458.41s` |
+| FLUX.2-klein 512 edit (1 ref, 4-step) | `67.36s` |
+| FLUX.2-klein 512 edit (2 refs, 4-step) | `98.93s` |
+| FLUX.2-klein 1024 flash trunk | `31.256 s/step` |
+| Z-Image turbo 1024 flash trunk | `50.90 s/step` |
+| FLUX.2-klein 512 VAE decode-only | `0.74s` |
+| Z-Image turbo 512 VAE decode-only | `1.79s` |
+| FLUX.2-klein 1024 VAE decode-only | `5.25s` |
+| Z-Image turbo 1024 VAE decode-only | `8.47s` |
+| Local Dream SDXL Base NPU 1024 (20-step) | `33.3s` |
+
+#### Showcase (SDXL-Style)
+
+![FLUX.2-klein 512 txt2img](./docs/adreno/assets/showcase/goal_step27_klein512_s4.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `38.06s / 4 steps`
+Config: `FLUX.2-klein`, `512x512`, `OpenCL + Adreno`
+
+![FLUX.2-klein 1024 txt2img](./docs/adreno/assets/showcase/goal_step23_klein1024_s4.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `129.55s / 4 steps`
+Config: `FLUX.2-klein`, `1024x1024`, `OpenCL + Adreno`
+
+![Z-Image turbo 512 txt2img](./docs/adreno/assets/showcase/goal_step25_zimg512_s8.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `95.99s / 8 steps`
+Config: `Z-Image turbo`, `512x512`, `DPM++ 2M`, `OpenCL + Adreno`
+
+![Z-Image turbo 1024 txt2img](./docs/adreno/assets/showcase/goal_step21_zimg1024_s8.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `458.41s / 8 steps`
+Config: `Z-Image turbo`, `1024x1024`, `DPM++ 2M`, `OpenCL + Adreno`
+
+![FLUX.2-klein 512 edit (1 ref)](./docs/adreno/assets/showcase/goal_step28_klein_edit1ref_s4.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `67.36s / 4 steps`
+Config: `FLUX.2-klein edit`, `512x512`, `1 ref`, `OpenCL + Adreno`
+
+![FLUX.2-klein 512 edit (2 refs)](./docs/adreno/assets/showcase/goal_step29_klein_edit2ref_s4.png)
+Device: `Snapdragon 8 Elite (Adreno 830)`
+Speed: `98.93s / 4 steps`
+Config: `FLUX.2-klein edit`, `512x512`, `2 refs`, `OpenCL + Adreno`
 
 ![SDXL Base NPU 1024](./docs/adreno/assets/step36/step36_sdxl1024_20step_33_3s.png)
 Device: `Snapdragon 8 Elite (HTP v79)`
 Speed: `33.3s / 20 steps`
 Config: `SDXL Base`, `1024x1024`, `Euler`, `CFG=7`
 
-For FLUX/Z-Image routes, this README暂不展示速度与图像，待重新逐项复核后再公开。
+#### GOAL.md Coverage
+
+- GOAL Step1-13: Q4 numerical repair, thread race fix, Qwen3-4B chain recovery, 1024 bring-up.
+- GOAL Step14-30: FLUX/Z-Image txt2img/edit + replay attention + VAE acceleration acceptance.
+- GOAL Step31-38: local-dream app routing, download UX, SDXL NPU compatibility, end-to-end acceptance.
 
 ## 🚀 Quick Start
 
