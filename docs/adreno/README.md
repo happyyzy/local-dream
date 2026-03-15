@@ -26,7 +26,7 @@ This logbook tracks local-dream integration acceptance for the sd.cpp Adreno pat
 
 - Step36: SDXL NPU 1024 compatibility and performance recovery
   - doc: `docs/adreno/steps/step36.md`
-  - output asset: `docs/adreno/assets/step36/step36_sdxl1024_20step_33_3s.png`
+  - output assets: `benchmarks/images/localdream_sdxl_1769073919488.png`, `benchmarks/images/localdream_sdxl_1769073990211.png`, `benchmarks/images/localdream_sdxl_1769163563122.png`
 - Step37: model card download UX + HF dispatch manifests
   - doc: `docs/adreno/steps/step37.md`
   - UI assets: `docs/adreno/assets/step37/`

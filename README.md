@@ -96,7 +96,9 @@ Device: `Snapdragon 8 Elite (Adreno 830)`
 Speed: `98.93s / 4 steps`
 Config: `FLUX.2-klein edit`, `512x512`, `2 refs`, `OpenCL + Adreno`
 
-![SDXL Base NPU 1024](./docs/adreno/assets/step36/step36_sdxl1024_20step_33_3s.png)
+![SDXL Base NPU 1024 (sample A)](./benchmarks/images/localdream_sdxl_1769073919488.png)
+![SDXL Base NPU 1024 (sample B)](./benchmarks/images/localdream_sdxl_1769073990211.png)
+![SDXL Base NPU 1024 (sample C)](./benchmarks/images/localdream_sdxl_1769163563122.png)
 Device: `Snapdragon 8 Elite (HTP v79)`
 Speed: `33.3s / 20 steps`
 Config: `SDXL Base`, `1024x1024`, `Euler`, `CFG=7`

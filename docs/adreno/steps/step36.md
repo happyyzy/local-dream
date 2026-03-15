@@ -21,4 +21,6 @@
   - 日志出现 `VAE tiling disabled by request for 1024x1024 output.`
 
 ## 图像证据
-- `docs/adreno/assets/step36/step36_sdxl1024_20step_33_3s.png`
+- `benchmarks/images/localdream_sdxl_1769073919488.png`
+- `benchmarks/images/localdream_sdxl_1769073990211.png`
+- `benchmarks/images/localdream_sdxl_1769163563122.png`
