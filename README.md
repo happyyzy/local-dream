@@ -66,44 +66,15 @@ If you like it, please consider [sponsor](https://github.com/xororz/local-dream?
 
 #### Showcase 
 
-![FLUX.2-klein 512 txt2img](./docs/adreno/assets/showcase/goal_step27_klein512_s4.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `38.06s / 4 steps`
-Config: `FLUX.2-klein`, `512x512`, `OpenCL + Adreno`
-
-![FLUX.2-klein 1024 txt2img](./docs/adreno/assets/showcase/goal_step23_klein1024_s4.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `129.55s / 4 steps`
-Config: `FLUX.2-klein`, `1024x1024`, `OpenCL + Adreno`
-
-![Z-Image turbo 512 txt2img](./docs/adreno/assets/showcase/goal_step25_zimg512_s8.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `95.99s / 8 steps`
-Config: `Z-Image turbo`, `512x512`, `DPM++ 2M`, `OpenCL + Adreno`
-
-![Z-Image turbo 1024 txt2img](./docs/adreno/assets/showcase/goal_step21_zimg1024_s8.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `458.41s / 8 steps`
-Config: `Z-Image turbo`, `1024x1024`, `DPM++ 2M`, `OpenCL + Adreno`
-
-![FLUX.2-klein 512 edit (1 ref)](./docs/adreno/assets/showcase/goal_step28_klein_edit1ref_s4.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `67.36s / 4 steps`
-Config: `FLUX.2-klein edit`, `512x512`, `1 ref`, `OpenCL + Adreno`
-
-![FLUX.2-klein 512 edit (2 refs)](./docs/adreno/assets/showcase/goal_step29_klein_edit2ref_s4.png)
-Device: `Snapdragon 8 Elite (Adreno 830)`
-Speed: `98.93s / 4 steps`
-Config: `FLUX.2-klein edit`, `512x512`, `2 refs`, `OpenCL + Adreno`
-
-![SDXL Base NPU 1024 (sample A)](./benchmarks/images/localdream_sdxl_1769073919488.png)
-![SDXL Base NPU 1024 (sample B)](./benchmarks/images/localdream_sdxl_1769073990211.png)
-![SDXL Base NPU 1024 (sample C)](./benchmarks/images/localdream_sdxl_1769163563122.png)
-Device: `Snapdragon 8 Elite (HTP v79)`
-Speed: `33.3s / 20 steps`
-Config: `SDXL Base`, `1024x1024`, `Euler`, `CFG=7`
-
-
+| Scenario | Sample | Device | Speed | Config |
+|---|---:|---|---:|---|
+| FLUX.2-klein 512 txt2img | <img src="./docs/adreno/assets/showcase/goal_step27_klein512_s4.png" width="256" /> | `Snapdragon 8 Elite (Adreno 830)` | `38.06s / 4 steps` | `FLUX.2-klein`, `512x512`, `OpenCL + Adreno` |
+| FLUX.2-klein 1024 txt2img | <img src="./docs/adreno/assets/showcase/goal_step23_klein1024_s4.png" width="256" /> | `Snapdragon 8 Elite (Adreno 830)` | `129.55s / 4 steps` | `FLUX.2-klein`, `1024x1024`, `OpenCL + Adreno` |
+| Z-Image turbo 512 txt2img | <img src="./docs/adreno/assets/showcase/goal_step25_zimg512_s8.png" width="256" /> | `Snapdragon 8 Elite (Adreno 830)` | `95.99s / 8 steps` | `Z-Image turbo`, `512x512`, `DPM++ 2M`, `OpenCL + Adreno` |
+| Z-Image turbo 1024 txt2img | <img src="./docs/adreno/assets/showcase/goal_step21_zimg1024_s8.png" width="256" /> | `Snapdragon 8 Elite (Adreno 830)` | `458.41s / 8 steps` | `Z-Image turbo`, `1024x1024`, `DPM++ 2M`, `OpenCL + Adreno` |
+| FLUX.2-klein 512 edit (1 ref) | <img src="./docs/adreno/assets/showcase/goal_step28_klein_edit1ref_s4.png" width="256" /> | `Snapdragon 8 Elite (Adreno 830)` | `67.36s / 4 steps` | `FLUX.2-klein edit`, `512x512`, `1 ref`, `OpenCL + Adreno` |
+| FLUX.2-klein 512 edit (2 refs) | <img src="./docs/adreno/assets/showcase/goal_step29_klein_edit2ref_s4.png" width="256" /> | `Snapdragon 8 Elite (Adreno 830)` | `98.93s / 4 steps` | `FLUX.2-klein edit`, `512x512`, `2 refs`, `OpenCL + Adreno` |
+| SDXL Base NPU 1024 (20-step) | <img src="./benchmarks/images/localdream_sdxl_1769073919488.png" width="170" /> <img src="./benchmarks/images/localdream_sdxl_1769073990211.png" width="170" /> <img src="./benchmarks/images/localdream_sdxl_1769163563122.png" width="170" /> | `Snapdragon 8 Elite (HTP v79)` | `33.3s / 20 steps` | `SDXL Base`, `1024x1024`, `Euler`, `CFG=7` |
 
 ## 🚀 Quick Start
 
