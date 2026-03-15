@@ -62,7 +62,7 @@ If you like it, please consider [sponsor](https://github.com/xororz/local-dream?
 | Z-Image turbo 512 VAE decode-only | `1.79s` |
 | FLUX.2-klein 1024 VAE decode-only | `5.25s` |
 | Z-Image turbo 1024 VAE decode-only | `8.47s` |
-| Local Dream SDXL Base NPU 1024 (20-step) | `33.3s` |
+| SDXL Base 1024 txt2img | `0.702s/step` |
 
 #### Showcase 
 
