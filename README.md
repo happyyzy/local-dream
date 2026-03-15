@@ -64,7 +64,7 @@ If you like it, please consider [sponsor](https://github.com/xororz/local-dream?
 | Z-Image turbo 1024 VAE decode-only | `8.47s` |
 | Local Dream SDXL Base NPU 1024 (20-step) | `33.3s` |
 
-#### Showcase (SDXL-Style)
+#### Showcase 
 
 ![FLUX.2-klein 512 txt2img](./docs/adreno/assets/showcase/goal_step27_klein512_s4.png)
 Device: `Snapdragon 8 Elite (Adreno 830)`
@@ -103,11 +103,7 @@ Device: `Snapdragon 8 Elite (HTP v79)`
 Speed: `33.3s / 20 steps`
 Config: `SDXL Base`, `1024x1024`, `Euler`, `CFG=7`
 
-#### GOAL.md Coverage
 
-- GOAL Step1-13: Q4 numerical repair, thread race fix, Qwen3-4B chain recovery, 1024 bring-up.
-- GOAL Step14-30: FLUX/Z-Image txt2img/edit + replay attention + VAE acceleration acceptance.
-- GOAL Step31-38: local-dream app routing, download UX, SDXL NPU compatibility, end-to-end acceptance.
 
 ## 🚀 Quick Start
 
